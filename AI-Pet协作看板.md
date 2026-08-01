@@ -197,6 +197,7 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-02 | ai-pet-admin | **B1.1 管理端资产能力已部署**：管理员可检索设备资产（含 MAC/SN 精确查询）、查看/轮换 `binding_id`，并在设备详情读取或配置人设、查看脱敏历史、外设状态和分析。生产构建通过；ECS `:8080` 首页和新 JS 资源均返回 200。 |
 | 2026-08-02 | ai-pet-admin | 设备详情的管理员人设、脱敏历史、分析、外设能力已开放侧栏入口：依据最近选择的设备直达相应标签；未选设备先回资产列表。记忆管理和知识库仍因后端未实现保持禁用。构建通过并部署 ECS `:8080`。 |
 | 2026-08-02 | ai-pet-admin | 人设星座下拉改为中文显示、英文稳定键提交（例如“双鱼座”→`pisces`）；构建通过并部署 ECS `:8080`。 |
+| 2026-08-02 | ai-pet-admin | 管理端脱敏历史接入时间窗口筛选与 offset 分页（每页 20 条）；保持管理员只读边界，不提供删除入口。构建通过并部署 ECS `:8080`。 |
 | 2026-08-02 | ai-pet-admin / ai-pet-backend | 补齐 admin 依赖与进度：M1+B1 已部署，但用户绑定入口因设备归属契约变更待回退；管理端资产接口等待 E1.1。M2 等 persona，M3 等 messages/memories，M4 等 analyses/peripheral/admin KB。 |
 | 2026-08-02 | ai-pet-backend | E1.1+E2+E4 本地实现完成、待人工 review/部署：binding_id 设备认领与 admin 禁绑；四元素/双鱼/INFP/ISFP 种子、人设读写、内部 persona_pack 七字段；对话历史分页与带时间窗的审计删除。ruff+mypy+pytest（56）通过。 |
 | 2026-08-02 | ai-pet-backend | **E1.1+E2+E4 已部署**：服务器提交 `1b356ae`，迁移至 `0005_devices_binding_id`，web-api 健康检查 200。admin 可开始 M2 人设页；app 须先改为 binding_id 绑定后可接人设与历史；xiaozhi 可接 persona_pack，仍须修复字符串 session_id、接入 devices/seen 与外设上报。 |
