@@ -64,14 +64,14 @@
 - ⬜ KB 种子数据（四元素 + 双鱼差分 + MBTI）
 
 ### ai-pet-admin（Codex / 会话 C 维护）
-- ✅ **M1 完成**：Vue 3 + Vite + Element Plus + Pinia + axios 工程；注册/登录、JWT 本地保持、401 跳登录、侧边栏主布局、设备列表/详情骨架均已实现，生产构建通过。
+- ✅ **M1+B1 完成**：Vue 3 + Vite + Element Plus + Pinia + axios 工程；注册/登录、JWT 本地保持、401 跳登录、侧边栏主布局，以及设备绑定、列表、详情、改名、解绑闭环均已实现，生产构建通过。
 - ✅ auth 联调依赖验证：线上 `healthz` 与测试账号登录均返回 200。
 - ✅ ECS HTTP 部署完成：Nginx 容器监听 `8080`，`/api/*` 同源反代到本机 backend `8010`；首页/SPA 路由 200，`/api/auth/me` 未登录返回 401，链路正常。
 - ✅ 阿里云安全组与 UFW 均已放行 TCP 8080；公网 `http://39.107.143.71:8080/` 可达，真实账号登录、进入设备页、刷新保持登录均验证通过，浏览器控制台无错误。
 - ℹ️ 已停止使用 Codex Sites；同源反代模式不需要 backend 增加 CORS 白名单。
-- ⬜ 设备接口仍为 501：设备列表保留“接口接入中”空态，待 backend 实现后自动启用真实数据。
+- ✅ 已接入 devices 五端点：列表的 `online` 在线状态、绑定、详情、改名、解绑/重绑均可联调；B1 已重新部署至 ECS:8080。
 - ⬜ M2：人设设置（依赖 persona API 从 501 转为可用）。
-- ⏭ **请求 backend 会话 A 的下一批接口**：优先实现 devices 列表/详情与 persona 读写，供 admin M1 设备页转实数、M2 人设配置联调；messages/memories、analyses/peripheral、admin/kb 后续分别支撑 M3/M4。
+- ⏭ **请求 backend 会话 A 的下一批接口**：优先实现 persona 读写，供 admin M2 人设配置联调；messages/memories、analyses/peripheral、admin/kb 后续分别支撑 M3/M4。
 
 ### xiaozhi-server（会话 B 维护）
 - ✅ 上游 v0.9.6 源码钉版并首推 GitHub（ckmx-zkp/aipet-xiaozhi-server-）
@@ -131,6 +131,7 @@
 | 2026-08-01 | xiaozhi-server | 真机首轮对话联通；火山密钥接入（ASR 豆包流式 2.0 + TTS 湾湾小何）；写入"开发优先级"共识节（P0：C1 旁路/A4 绑定/人设链） |
 | 2026-08-01 | ai-pet-admin | Codex M1 管理台已发布公网：http://39.107.143.71:8080（ai-pet-admin-web 容器，nginx host 网络）；/api 反代 127.0.0.1:8010，真实登录端到端验证通过（200+JWT）；设备页等 E1 点亮 |
 | 2026-08-01 | ai-pet-backend | C0+E1 上线：契约补齐 8 项 + devices 五端点（绑定/列表/详情/改名/解绑+重绑），迁移 0002（user_id 可空，解绑不删历史），端到端验证通过，openapi 已重导给 admin |
+| 2026-08-02 | ai-pet-admin | B1 设备管理闭环完成并部署至 ECS:8080：绑定、列表、详情、改名、解绑接入真实 devices API，修正 `online` 状态映射；生产构建通过、容器重载后首页 200。 |
 | 2026-08-01 | ai-pet-backend | docs/11 定稿：设备 BLE 社交设计（HMAC 滚动码防追踪、经小智中转、2 新表 3 端点、social_enabled 默认关、V0.3/E9）+ App 数据下发可见性矩阵（三级：可编辑/只读/不可见，推送 V0.3+）|
 | 2026-08-01 | xiaozhi-server | 配置基线回写（docs/08，脱敏）；V0.2 任务拆解完成并回执会话 A（旁路复用上游 report 机制、persona_pack 挂钩点勘察、Memory MCP 建议 HTTP 传输）；新增 2 项待决（MCP 传输方式、安全默认人设文案） |
 | 2026-08-01 | xiaozhi-server | 定时巡检上线（每 30min 探活+异常写看板）；首探发现：两内部接口已注册路由但仍是桩（pack 501 / events "not implemented"），且实际前缀为 `/api/internal/*`（契约写的 `/internal/*`，已挂待决请会话 A 统一） |
