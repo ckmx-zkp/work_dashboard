@@ -85,7 +85,7 @@
 
 | App 欠缺项 | backend 前置 | admin 前置 | 当前结论 |
 |------|-------------|------------|----------|
-| B2.1/B2.2 设备认领、列表、详情、多设备切换 | E1.1 落地 `binding_id` 生成/认领及用户设备列表；app 需从 MAC 直绑迁移为 `binding_id` 认领 | 停止调用用户 `/devices/bind`；改接管理端设备资产查看/诊断接口，不能写 `devices.user_id` | **主链路阻塞**；当前 app MAC 绑定会与 admin 旧行为冲突 |
+| B2.1/B2.2 设备认领、列表、详情、多设备切换 | E1.1 `binding_id` 生成/认领及用户设备列表已部署 | admin 停止调用用户 `/devices/bind`；后续改接管理端设备资产查看/诊断接口，不能写 `devices.user_id` | ✅ app B2.1 已迁移并部署；B2.2 列表/详情与多设备切换待开发 |
 | B3 配网引导 | 不依赖 backend/admin 用户 API | 不依赖 admin | 依赖固件/小智的实际配网能力与图文流程 |
 | C1 人设设置、C4 首页人设摘要 | E2 人设读写、已发布的星座/MBTI 种子、`persona_pack` 实际可用并完成联调 | admin 的 KB 发布是后续运营能力，不是 app 保存人设的运行时依赖 | app 未接入；需先确认 E2 已部署并用真实账号验收 |
 | C2 记忆管理、C3 历史浏览 | memories CRUD/approve/reject、messages 查询/删除、Memory MCP 实库 | admin 的审核/运营页面是协作配套，不是 app 运行时依赖 | backend 当前仍为 501 骨架，**阻塞** |
@@ -196,3 +196,4 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-02 | ai-pet-backend | **E1.1+E2+E4 已部署**：服务器提交 `1b356ae`，迁移至 `0005_devices_binding_id`，web-api 健康检查 200。admin 可开始 M2 人设页；app 须先改为 binding_id 绑定后可接人设与历史；xiaozhi 可接 persona_pack，仍须修复字符串 session_id、接入 devices/seen 与外设上报。 |
 | 2026-08-02 | 跨仓权限边界 | 补正 admin M2 依赖：E2 persona 是用户拥有设备 API，app 可直接接入；admin 不可再以绑定占用用户归属，需后端另实现 admin 设备资产/人设授权接口后才能管理真实用户设备。 |
 | 2026-08-02 | ai-pet-app | 新增“用户端依赖快照”：明确 app 不以 admin 为运行时依赖；设备认领等待 backend E1.1 `binding_id` 与 admin 资产接口改造，人设/记忆/历史/外设/分析/导出依赖按端点状态列明。 |
+| 2026-08-02 | ai-pet-app | B2.1 已迁移至 backend E1.1 正式 `binding_id` 认领：移除 MAC 直绑，补齐 403/404/409/422 提示；`typecheck`、`build` 通过，已部署 ECS `:8081`，公网构建含 `binding_id`。 |
