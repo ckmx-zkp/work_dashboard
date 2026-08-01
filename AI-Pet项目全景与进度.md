@@ -38,12 +38,12 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    BE["后端：设备 / 人设 / 历史 / 资产"] --> CHECK["真实设备验收"]
-    APP["用户端：登录 / 绑定 / 设备切换 / 人设"] --> CHECK
-    ADMIN["管理台：资产 / 人设 / 历史 / 外设"] --> CHECK
-    VOICE["设备语音：人设刷新 / 眼睛回传"] --> CHECK
-    CHECK -->|"通过"| PILOT["连续内测体验"]
-    PILOT --> RELEASE["域名 + HTTPS 后正式发布"]
+    BE["后端能力已上线"] --> CHECK["真实设备验收"]
+    APP["用户端能力已上线"] --> CHECK
+    ADMIN["管理台能力已上线"] --> CHECK
+    VOICE["设备语音能力已部署"] --> CHECK
+    CHECK --> PILOT["连续内测体验"]
+    PILOT --> RELEASE["正式发布"]
 ```
 
 ### 验收与风险依赖
