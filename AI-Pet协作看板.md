@@ -44,7 +44,7 @@
 
 | 集成点 | 契约 | backend 侧 | xiaozhi-server 侧 | 联调 |
 |--------|------|-----------|-------------------|------|
-| persona_pack 拉取 | `GET /api/internal/devices/{uid}/persona_pack` | ✅ 已部署（E2）：固定 7 字段；未配置人设返回 404 | 🟡 已随 `v0.9.6-b4` 部署：连接首次拉取 + 默认 300 秒定时刷新、缓存/onboarding 降级、pack 变化时 Prompt/`default_emotion` 更新 | 待真机人设变更验收 |
+| persona_pack 拉取 | `GET /api/internal/devices/{uid}/persona_pack` | ✅ 已部署（E2）：固定 7 字段；未配置人设返回 404 | 🟡 已随 `v0.9.6-b6` 部署：固定基础行为库 `pet_default` + 连接首次拉取/默认 300 秒刷新、缓存/onboarding 降级、pack 变化时 Prompt/`default_emotion` 更新 | 待真机人设变更验收 |
 | 转写旁路写入 | `POST /api/internal/chat/events` | ✅ 已实现（**当前真契约**：5 字段，`session_id`=字符串 UUID） | 🟡 已改为原生字符串 UUID 并随自建镜像 `v0.9.6-b2` 部署；待真机提交 user/assistant 两条事件验收 | 待验收 |
 | 外设状态快照 | `POST /api/internal/peripheral/events` | ✅ 已实现：单行全量覆盖写 | 🟡 已随 `v0.9.6-b4` 部署：成功的眼睛 MCP 调用映射 emotion/gaze/closed 并异步上报 | 待真机眼睛动作验收 |
 | 会话结束通知 | `POST /api/internal/chat/sessions/{id}/end` | ✅ 路由已注册 | 🟡 已改用连接原生字符串 UUID 并随 `v0.9.6-b2` 部署；待一次真实断开会话验收 | 待验收 |
@@ -119,6 +119,23 @@
 1. **真机 E2E 验收（最高优先）**：用真实设备依次证明 `devices/seen` 生成/更新资产、修改人设后 `persona_pack` 被拉取并改变下一会话 Prompt/默认表情、每轮 user/assistant 事件落入 backend、断开会话触发 `daily_summary` 入队、一次眼睛动作写入外设快照。
 2. **失败可观测性**：为上述旁路请求输出不含对话原文的状态码、重试次数、`device_uid`、`session_id` 日志/指标；确认 4xx 丢弃、5xx 有界重试且绝不阻塞语音/TTS。
 3. **Memory MCP 挂载暂不开发**：等待 backend 先实现 memories 实库并将 stdio 改为双方确认的 HTTP MCP 契约；届时按超时降级为“无记忆会话”。
+4. **Context Provider 合并（依赖后端 C5，见下）**：小智上游会在唤醒/构建 Prompt 时以 `device-id` 请求上下文源并替换 `{{ dynamic_context }}`。当前 persona_pack 在后续替换了最终 Prompt，动态上下文不会保留；待 backend 提供 C5 后，本仓将把固定基础行为 + backend persona_pack + 上游动态上下文合并为同一最终 Prompt。不得把完整 KB 或原始对话注入 Prompt。
+
+### ai-pet-backend 待完成：C5 Context Provider（由 xiaozhi-server 提出，2026-08-02）
+
+**现状核实**：backend 当前没有 Context Provider 路由；已上线的 `persona_pack` 不是上游 Context Provider 响应格式，也不包含 `code/data` 包装。小智上游实现只会 `GET` 配置 URL，自动带 `device-id` 请求头，要求 HTTP 200 且 JSON `{"code": 0, "data": ...}`，单源超时 3 秒。
+
+**目标**：增加 `GET /api/internal/context/device`（路径待 backend 确认并先写入 backend docs/06 与本仓 docs/05）。读取 `device-id`（小写冒号 MAC，作为 `device_uid`），采用内部服务鉴权 `X-Internal-Token`；token 仅置于小智容器本地配置/部署密钥，不写智控台、仓库或看板。
+
+**响应契约（建议定稿）**：未知设备、未认领设备或无可用上下文均返回 `200 {"code":0,"data":[]}`，避免每次唤醒报错；正常响应返回不超过 6 条、总计不超过约 800 中文字符的字符串列表，例如：
+
+```json
+{"code": 0, "msg": "success", "data": ["当前陪伴风格：……", "今日可用的星座/MBTI 知识摘要：……"]}
+```
+
+**数据边界与性能**：只读已发布 KB 中与设备当前人设相关的短摘要，后续可追加已审核记忆/当天分析摘要；不返回完整 KB、原始聊天、敏感字段或内部 ID；不得在请求中调用 LLM/worker，目标 P95 < 300ms，失败按空数据降级。深度知识问答仍待后续 Memory MCP/RAG 工具，不由 Context Provider 承担。
+
+**验收**：容器内带 `device-id` + 内部 token 的 GET 返回契约 JSON；智控台配置该内部 URL 后，真机唤醒时日志确认一次拉取，最终 Prompt 含摘要但不含密钥/原始对话；接口慢、5xx、空人设均不阻塞首轮语音。
 
 ### 已实现、可由 admin 继续开发
 
@@ -227,6 +244,8 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-02 | xiaozhi-server | **修复打断后的过期眼睛工具调用**：根因是新一轮语音会把共享 `client_abort` 重置为 `False`，旧 LLM 后台任务随后仍执行 MCP。提交 `5238938` 为每轮对话分配不可复用 turn ID；打断/新语音会使旧轮次的 LLM 输出、工具结果与尚未执行的 MCP 调用失效。已构建并部署 `xiaozhi-aipet-server:v0.9.6-b2`，容器已启动；待真机执行“向上看→立即打断→向下看”回归验证。 |
 | 2026-08-02 | xiaozhi-server | 模型主链切换：智能体“测试1”主 LLM 已从受限的 GLM-4.5-Flash 改为千帆 Coding Plan OpenAI 兼容端点，模型 `qianfan-code-latest`；密钥仅存服务器模型配置，不入仓/看板。服务器直连探测返回 200（当前别名实际路由至 `glm-5.1`）；管理服务已重启清缓存，下一次设备重连生效。 |
 | 2026-08-02 | xiaozhi-server | **V0.2 人设与外设链已部署**：提交 `beb769d`；`persona_pack` 连接首次拉取后默认每 300 秒刷新，按 remote→缓存→onboarding 降级，内容变化时替换 Prompt 并应用默认表情；成功的眼睛 MCP 调用异步写 `peripheral/events` 全量快照。镜像 `xiaozhi-aipet-server:v0.9.6-b4` 已运行，容器内编译通过；待真机/后端落库 E2E。 |
+| 2026-08-02 | xiaozhi-server | **基础行为层已部署**：提交 `edcfd9f`，镜像 `xiaozhi-aipet-server:v0.9.6-b6` 已运行。服务固定加载行为库的 `pet_default`，再叠加 backend 动态 persona_pack；容器内加载、编译验证通过。 |
+| 2026-08-02 | xiaozhi-server → ai-pet-backend | 核对上游 Context Provider 协议后确认 backend 尚无对应 `code/data` GET 路由；已新增 C5 待办与建议契约。该能力只注入短摘要，不能替代 Memory MCP/RAG；小智侧同时待修 persona_pack 与 dynamic_context 的最终 Prompt 合并。 |
 | 2026-08-02 | ai-pet-admin | **B1.1 管理端资产能力已部署**：管理员可检索设备资产（含 MAC/SN 精确查询）、查看/轮换 `binding_id`，并在设备详情读取或配置人设、查看脱敏历史、外设状态和分析。生产构建通过；ECS `:8080` 首页和新 JS 资源均返回 200。 |
 | 2026-08-02 | ai-pet-admin | 设备详情的管理员人设、脱敏历史、分析、外设能力已开放侧栏入口：依据最近选择的设备直达相应标签；未选设备先回资产列表。记忆管理和知识库仍因后端未实现保持禁用。构建通过并部署 ECS `:8080`。 |
 | 2026-08-02 | ai-pet-admin | 人设星座下拉改为中文显示、英文稳定键提交（例如“双鱼座”→`pisces`）；构建通过并部署 ECS `:8080`。 |
@@ -254,4 +273,5 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-02 | ai-pet-app | **D1 外设状态已接入并部署**：调用用户端 `GET /devices/{id}/peripheral`，展示眼睛表情、视线、闭眼、可读扩展字段与更新时间；无设备及 404 无快照均为可恢复空态，支持手动刷新。同步更新人设全量种子提示；`typecheck`、`build` 通过，ECS `:8081` 首页 200、未登录外设接口预期 401。 |
 | 2026-08-02 | 项目看板 | **当前协作建议已校正**：小智 V0.2 的 persona_pack、聊天旁路、会话结束、首见设备和外设旁路代码均已部署，下一步为真机 E2E 落库验收；admin 可直接开发 KB 运营前端，app 可直接开发外设/分析展示与人设初始化；记忆页等待 backend memories/MCP 实库。 |
 | 2026-08-02 | ai-pet-backend | **LLM 成长链已部署并首验收通过**：提交 `18f09e2` + `14c62c4`；千帆 OpenAI 兼容服务以 `qianfan-code-latest` 配置到服务器私有 `.env`（密钥不入仓/看板），真实脱敏会话的 `daily_summary` 返回 200 并完成，已写入 1 条每日摘要与 1 条人设成长建议。该会话无长期记忆候选；Worker 超时调为 90 秒。 |
+| 2026-08-02 | ai-pet-backend | **稳定角色档案已部署**：提交 `7659734`，迁移 `0007_persona_dossier` 已执行；`GET/PUT persona` 及 Admin 对应写入新增 `dossier`（身份、背景、角色、目标、进化规则、关系），其内容在下次会话编译进固定 7 字段 `persona_pack` 的提示片段。视觉与档案内容 AI 生成需求见 backend `prompt生成需求.md`（提交 `cc9affc`）。 |
 | 2026-08-02 | ai-pet-app | **原型核对后完成 C2 + D2 并部署**：记忆页接入用户端 memories 列表/搜索、手动新建、归档删除与 candidate 通过/忽略；日运/小记页接入 `daily_summary` analyses，兼容无结果等待态。`typecheck`、`build` 通过，ECS `:8081` 首页 200；未登录 memories/analyses 均预期 401。D3 导出与人设问卷仍因后端 501 阻塞。 |
