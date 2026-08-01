@@ -44,13 +44,13 @@
 
 | 集成点 | 契约 | backend 侧 | xiaozhi-server 侧 | 联调 |
 |--------|------|-----------|-------------------|------|
-| persona_pack 拉取 | `GET /api/internal/devices/{uid}/persona_pack` | 骨架 501 | 未开始 | 未开始 |
-| 转写旁路写入 | `POST /api/internal/chat/events` | ✅ 已实现（实测 422 校验生效，5 字段：device_uid/session_id(int64)/role/content/ts） | ✅ 已实现（`core/business_report.py`+reportHandle 挂钩，队列重试不阻断语音，已随自建镜像 b1 部署；容器内探针 422/401 通过） | 待真实对话验证 |
-| 外设状态快照 | `POST /api/internal/peripheral/events` | 骨架 501 | 未开始 | 未开始 |
-| 会话结束通知 | `POST /api/internal/chat/sessions/{id}/end` | ✅ 路由已注册 | ✅ 已实现（随旁路模块，挂 connection.close()） | 待真实对话验证 |
+| persona_pack 拉取 | `GET /api/internal/devices/{uid}/persona_pack` | ✅ 已部署（E2）：固定 7 字段；未配置人设返回 404 | 未实现会话开始单次拉取、缓存、Prompt 注入与 `default_emotion` 映射 | 未开始 |
+| 转写旁路写入 | `POST /api/internal/chat/events` | ✅ 已实现（**当前真契约**：5 字段，`session_id`=字符串 UUID） | ⚠️ 队列+挂钩已部署且内网/鉴权可达；仍发送旧 int64 `business_session_no`，真实设备实测 422 后丢弃 | 未联通 |
+| 外设状态快照 | `POST /api/internal/peripheral/events` | 路由实现状态待部署确认 | 未实现：眼睛状态变化未异步上报、未做去重/枚举映射 | 未开始 |
+| 会话结束通知 | `POST /api/internal/chat/sessions/{id}/end` | ✅ 路由已注册 | ⚠️ 已挂 `connection.close()`，但仍使用旧 int64 会话号，真实设备实测 404 | 未联通 |
 | Memory MCP 挂载 | `memory.search/add/forget`，超时 800ms~1.5s | 骨架（stdio，工具签名已注册） | 未开始 | 未开始 |
-| device_id 对齐 | MAC/UUID ↔ 业务 device_id | 表已建（device_uid 唯一索引） | 未开始 | 未开始 |
-| 鉴权 | `/internal/*` 走 `X-Internal-Token` | ✅ 已实现 | 未开始 | 未开始 |
+| device_id 对齐 | 小写冒号 MAC `device_uid`（如 `8c:fd:49:0c:a8:78`） | ✅ 已部署：`devices/seen` 以 MAC 建立资产，生成独立 app `binding_id` | ⚠️ 对话旁路已用 MAC；尚未在会话开始调用 `devices/seen` | 未联通 |
+| 鉴权 | `/api/internal/*` 走 `X-Internal-Token` | ✅ 已实现 | ✅ 已配置并随旁路请求发送；真实请求到达 backend | 已联通 |
 
 状态值约定：`未开始 / 骨架 / 已实现 / 已联调`
 
@@ -62,6 +62,9 @@
 - ✅ **2026-08-01 首次部署完成**：5 容器全部 Up（web-api @8010、memory-mcp、agent-worker、pg16、redis），迁移已执行（15 表），healthz/401 验证通过，详见 `docs/09-部署进度与运维.md`
 - ⬜ 路由业务实现（~~auth~~ 已完成并上线验证；devices/persona/messages 等仍是 501 骨架）
 - ⬜ KB 种子数据（四元素 + 双鱼差分 + MBTI）
+- ✅ **E1.1 已部署**：新增 `binding_id` 迁移；小智 `devices/seen` 首见生成绑定 ID；app `/devices/bind` 改按绑定 ID 认领；admin 调用用户 bind 返回 403。
+- ✅ **E2 已部署**：KB 种子（四元素、双鱼、INFP/ISFP）；用户 persona GET/PUT；内部 persona_pack 固定 7 字段。问卷、KB 管理与发布仍不属于本项。
+- ✅ **E4 已部署**：`GET /devices/{id}/messages` 按设备/时间窗分页读取脱敏内容；`DELETE` 必须带时间窗并写审计日志。
 
 ### ai-pet-admin（Codex / 会话 C 维护）
 - ✅ **M1+B1 完成**：Vue 3 + Vite + Element Plus + Pinia + axios 工程；注册/登录、JWT 本地保持、401 跳登录、侧边栏主布局，以及设备绑定、列表、详情、改名、解绑闭环均已实现，生产构建通过。
@@ -70,8 +73,24 @@
 - ✅ 阿里云安全组与 UFW 均已放行 TCP 8080；公网 `http://39.107.143.71:8080/` 可达，真实账号登录、进入设备页、刷新保持登录均验证通过，浏览器控制台无错误。
 - ℹ️ 已停止使用 Codex Sites；同源反代模式不需要 backend 增加 CORS 白名单。
 - ✅ 已接入 devices 五端点：列表的 `online` 在线状态、绑定、详情、改名、解绑/重绑均可联调；B1 已重新部署至 ECS:8080。
-- ⬜ M2：人设设置（依赖 persona API 从 501 转为可用）。
-- ⏭ **请求 backend 会话 A 的下一批接口**：优先实现 persona 读写，供 admin M2 人设配置联调；messages/memories、analyses/peripheral、admin/kb 后续分别支撑 M3/M4。
+- ⚠️ **设备绑定行为待回退/改造**：现有 admin B1 调用用户 `/devices/bind`，会占用 `devices.user_id` 并阻塞 app 认领；按 2026-08-02 新契约，admin 不再绑定或认领设备。E1.1 上线后改为管理端设备资产查看/诊断接口，用户 app 仅以 `binding_id` 认领。
+- ⬜ **M2 人设设置**：页面待实现；依赖 backend E2 的 `GET/PUT /devices/{id}/persona`。xiaozhi 侧还依赖同一领域的内部 `persona_pack`。
+- ⬜ **M3 对话与记忆**：依赖 `GET/DELETE /devices/{id}/messages`、memory CRUD/approve/reject，以及 Memory MCP 接真实库；当前后端均未实现。
+- ⬜ **M4 分析、外设与 KB 运营**：依赖 `GET /devices/{id}/analyses`、`GET /devices/{id}/peripheral`，以及 `/admin/kb/*`、feedback accept/ignore；当前后端均未实现。外设事件的小智侧上报也尚未完成。
+- ⏭ **admin 下一批改造顺序**：先移除用户绑定入口并改接 E1.1 管理端资产接口 → M2 人设 → M3 历史/记忆 → M4 分析/外设/KB。
+
+### ai-pet-app（用户端）依赖快照（2026-08-02）
+
+**原则**：app 运行时只调用 backend 的公开用户 API，**不依赖 admin 才能运行**。admin 是运营/资产管理端；它的唯一直接前置是不得再占用用户设备归属，必须先完成 E1.1 的资产接口改造。
+
+| App 欠缺项 | backend 前置 | admin 前置 | 当前结论 |
+|------|-------------|------------|----------|
+| B2.1/B2.2 设备认领、列表、详情、多设备切换 | E1.1 落地 `binding_id` 生成/认领及用户设备列表；app 需从 MAC 直绑迁移为 `binding_id` 认领 | 停止调用用户 `/devices/bind`；改接管理端设备资产查看/诊断接口，不能写 `devices.user_id` | **主链路阻塞**；当前 app MAC 绑定会与 admin 旧行为冲突 |
+| B3 配网引导 | 不依赖 backend/admin 用户 API | 不依赖 admin | 依赖固件/小智的实际配网能力与图文流程 |
+| C1 人设设置、C4 首页人设摘要 | E2 人设读写、已发布的星座/MBTI 种子、`persona_pack` 实际可用并完成联调 | admin 的 KB 发布是后续运营能力，不是 app 保存人设的运行时依赖 | app 未接入；需先确认 E2 已部署并用真实账号验收 |
+| C2 记忆管理、C3 历史浏览 | memories CRUD/approve/reject、messages 查询/删除、Memory MCP 实库 | admin 的审核/运营页面是协作配套，不是 app 运行时依赖 | backend 当前仍为 501 骨架，**阻塞** |
+| D1 外设状态、D2 日运/小记、D3 数据导出 | peripheral/analyses/export 用户 API；日运还依赖 chat events、会话结束和 worker 链路 | admin 的分析/KB 运营页面不阻塞 app 只读展示 | backend 端点仍未完成，且小智旁路联调未通，**阻塞** |
+| F1/F2 发布与安装 | 无业务 API 新前置；需完成端到端验收 | 无 | 还需域名与 HTTPS；当前 8081 HTTP 仅适合内测 |
 
 ### xiaozhi-server（会话 B 维护）
 - ✅ 上游 v0.9.6 源码钉版并首推 GitHub（ckmx-zkp/aipet-xiaozhi-server-）
@@ -79,7 +98,7 @@
 - ✅ 修复三处部署坑：OTA 下发占位域名（`server.fronted_url`/`server.ota`/`server.websocket` 已指向公网地址）、`server.auth_key` 与 `server.secret` 不一致（真机连不上的隐患）
 - ✅ 模型链路：LLM=GLM-4.5-Flash（默认，备用 Kimi K2.7）；ASR=豆包流式 2.0（试用 20h）；TTS=火山双向流式·湾湾小何（`zh_female_wanwanxiaohe_moon_bigtts`）
 - ✅ 真机 `8c:fd:49:0c:a8:78` 激活绑定+首轮对话联通（唤醒→ASR→GLM 人设→TTS→眼睛 emotion 联动）；固件联调看板：`AI-Pet固件联调看板.md`（本目录）
-- ⬜ V0.2 集成：persona_pack 拉取、旁路写入、Memory MCP——**设计已拆解并回执会话 A**（见跨会话消息）；旁路复用上游 report 机制加支线，persona_pack 挂钩点已勘察；代码待 E2/chat events 可用后开工
+- ⚠️ V0.2 业务集成：内网与内部鉴权已联通，但业务数据尚未联通。阻塞：backend E2 `persona_pack` 仍 501；小智旁路/会话结束仍发旧 int64 `session_id`，与 backend 字符串 UUID 契约冲突（真实设备 events=422、end=404）；`devices/seen`、persona 缓存注入、外设状态旁路均未实现。Memory MCP 暂缓，待 backend 定传输。
 
 ## 开发优先级（2026-08-01 会话 B 提议，待会话 A 确认）
 
@@ -104,6 +123,7 @@
 | 事项 | 阻塞谁 | 状态 |
 |------|--------|------|
 | **设备归属与管理台职责冲突**：admin 当前以 admin 用户身份调用用户 API `POST /devices/bind`，写入同一 `devices.user_id`；该字段非空时 app 用户绑定必然 409，角色不区分。产品期望“管理台登记/管理”不占用用户归属，需 backend 先更新设备契约与管理端专用接口（或明确 admin 仅可查看/解绑），再改 admin。临时测试可在原 admin 账号解绑，`user_id` 置空后由 app 认领，历史保留。 | app 用户绑定、admin 设备管理 | 待 backend/产品定夺，**禁止用 admin 绑定模拟设备登记** |
+| **设备身份契约已定，待实现**：MAC=`device_uid`（小智硬件核心 ID）；后端 `devices.id` 为平台管理 ID；后端首见 MAC 时生成独立、不可猜测的 app `binding_id`，app 只用该 ID 认领。admin 不得调用用户 bind 或占用 `user_id`；管理端另设设备资产接口。契约已更新至 backend docs/06。 | app B2、admin 设备管理 | E1.1 待实现 |
 | **Memory MCP 传输方式**：会话 B 建议 streamable HTTP MCP（同机 127.0.0.1 直连）；backend memory-mcp 现为 stdio 骨架，需会话 A 评估改造量并**先改 docs/05 契约**再实现 | C3 Memory MCP（会话 B 挂载开发） | 待会话 A 定夺 |
 | **内置安全默认人设文案**：persona_pack 拉取失败的最终兜底 prompt 由谁供稿（建议产品/backend 出一版中性安全文案，会话 B 内置到配置）。**补充（用户拍板 2026-08-01）：该文案同时兼任"新设备未配置人设"的 onboarding 引导**（流程：设备激活→backend 无人设→引导人设陪聊→用户在 App/管理台配置→下轮会话生效） | 会话 B persona_pack 降级链 | 待会话 A/产品 |
 | **persona_pack "未配置"语义**：新设备在 backend 尚无人设档案时，pack API 返回 404 还是默认空 pack？需会话 A 在 docs/06 钉死（会话 B 倾向 404，清晰可判） | 会话 B persona_pack 降级链 | 待会话 A 定夺 |
@@ -169,3 +189,9 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-02 | ai-pet-app | 修复 B1 认证契约：登录读取 `access_token`，注册成功后再登录；生产 API 改为同源 `/api`。`npm run typecheck` 与 `npm run build` 均通过，已将新构建部署至 ECS `:8081` 并重建 `ai-pet-app-web`；公网首页 200、未登录 `/api/auth/me` 返回预期 401。 |
 | 2026-08-02 | ai-pet-app | B2.1 手动绑定已接入：绑定页调用 `POST /devices/bind`，处理成功、409 冲突与 422 校验反馈；`typecheck`、`build` 通过，已部署 ECS `:8081`，公网新构建包含 `/devices/bind`。设备列表/详情仍待 B2.2。 |
 | 2026-08-02 | 跨仓设备归属 | 核实 app 绑定 409：非 app 缺陷。admin 设备页同样调用用户 `/devices/bind`，backend 以唯一 `devices.user_id` 记录归属且绑定时不区分 admin/user；已登记为待决，需先改 backend 契约和 admin 职责边界。 |
+| 2026-08-02 | ai-pet-backend | 契约变更：设备身份分离为 MAC `device_uid`、后端平台 `devices.id`、app 认领 `binding_id`；E1.1 将实现绑定 ID 生成、app 认领及 admin 禁止用户绑定。 |
+| 2026-08-02 | xiaozhi-server / ai-pet-backend | 真实设备联调核实：`/api/internal/*` 内网可达且 `X-Internal-Token` 生效；业务未联通。小智旁路仍发 int64 `session_id`，与 backend 字符串 UUID 契约冲突，events 实测 422、session end 实测 404；`persona_pack` 仍 501，`devices/seen` 与外设状态旁路未实现。需先统一 xiaozhi docs/05 与 backend docs/06 的字符串会话契约，再实施 V0.2。 |
+| 2026-08-02 | ai-pet-admin / ai-pet-backend | 补齐 admin 依赖与进度：M1+B1 已部署，但用户绑定入口因设备归属契约变更待回退；管理端资产接口等待 E1.1。M2 等 persona，M3 等 messages/memories，M4 等 analyses/peripheral/admin KB。 |
+| 2026-08-02 | ai-pet-backend | E1.1+E2+E4 本地实现完成、待人工 review/部署：binding_id 设备认领与 admin 禁绑；四元素/双鱼/INFP/ISFP 种子、人设读写、内部 persona_pack 七字段；对话历史分页与带时间窗的审计删除。ruff+mypy+pytest（56）通过。 |
+| 2026-08-02 | ai-pet-backend | **E1.1+E2+E4 已部署**：服务器提交 `1b356ae`，迁移至 `0005_devices_binding_id`，web-api 健康检查 200。admin 可开始 M2 人设页；app 须先改为 binding_id 绑定后可接人设与历史；xiaozhi 可接 persona_pack，仍须修复字符串 session_id、接入 devices/seen 与外设上报。 |
+| 2026-08-02 | ai-pet-app | 新增“用户端依赖快照”：明确 app 不以 admin 为运行时依赖；设备认领等待 backend E1.1 `binding_id` 与 admin 资产接口改造，人设/记忆/历史/外设/分析/导出依赖按端点状态列明。 |
