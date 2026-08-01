@@ -103,6 +103,7 @@
 
 | 事项 | 阻塞谁 | 状态 |
 |------|--------|------|
+| **设备归属与管理台职责冲突**：admin 当前以 admin 用户身份调用用户 API `POST /devices/bind`，写入同一 `devices.user_id`；该字段非空时 app 用户绑定必然 409，角色不区分。产品期望“管理台登记/管理”不占用用户归属，需 backend 先更新设备契约与管理端专用接口（或明确 admin 仅可查看/解绑），再改 admin。临时测试可在原 admin 账号解绑，`user_id` 置空后由 app 认领，历史保留。 | app 用户绑定、admin 设备管理 | 待 backend/产品定夺，**禁止用 admin 绑定模拟设备登记** |
 | **Memory MCP 传输方式**：会话 B 建议 streamable HTTP MCP（同机 127.0.0.1 直连）；backend memory-mcp 现为 stdio 骨架，需会话 A 评估改造量并**先改 docs/05 契约**再实现 | C3 Memory MCP（会话 B 挂载开发） | 待会话 A 定夺 |
 | **内置安全默认人设文案**：persona_pack 拉取失败的最终兜底 prompt 由谁供稿（建议产品/backend 出一版中性安全文案，会话 B 内置到配置）。**补充（用户拍板 2026-08-01）：该文案同时兼任"新设备未配置人设"的 onboarding 引导**（流程：设备激活→backend 无人设→引导人设陪聊→用户在 App/管理台配置→下轮会话生效） | 会话 B persona_pack 降级链 | 待会话 A/产品 |
 | **persona_pack "未配置"语义**：新设备在 backend 尚无人设档案时，pack API 返回 404 还是默认空 pack？需会话 A 在 docs/06 钉死（会话 B 倾向 404，清晰可判） | 会话 B persona_pack 降级链 | 待会话 A 定夺 |
@@ -167,3 +168,4 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-01 | ai-pet-app | **Epic A 骨架 + B1 完成**：Vue3+Vite7+TS strict+Pinia+axios+vite-plugin-pwa 工程建成；三档响应式导航壳（<600 底Tab/600–1024 Rail/>1024 侧栏）；axios 封装（Bearer 注入+401 跳登录）；登录/注册页真实对接 `/auth/*`（响应字段待真实账号联调确认）；P0–P8 九页路由挂通（P2 绑定/P3 人设为交互占位）；`VITE_API_BASE` 缺省 `http://39.107.143.71:8080/api`；构建+vue-tsc strict+PWA 生成全通过。注：根目录三份协作文档已移至 `work_dashboard/`（非本会话操作） |
 | 2026-08-02 | ai-pet-app | 修复 B1 认证契约：登录读取 `access_token`，注册成功后再登录；生产 API 改为同源 `/api`。`npm run typecheck` 与 `npm run build` 均通过，已将新构建部署至 ECS `:8081` 并重建 `ai-pet-app-web`；公网首页 200、未登录 `/api/auth/me` 返回预期 401。 |
 | 2026-08-02 | ai-pet-app | B2.1 手动绑定已接入：绑定页调用 `POST /devices/bind`，处理成功、409 冲突与 422 校验反馈；`typecheck`、`build` 通过，已部署 ECS `:8081`，公网新构建包含 `/devices/bind`。设备列表/详情仍待 B2.2。 |
+| 2026-08-02 | 跨仓设备归属 | 核实 app 绑定 409：非 app 缺陷。admin 设备页同样调用用户 `/devices/bind`，backend 以唯一 `devices.user_id` 记录归属且绑定时不区分 admin/user；已登记为待决，需先改 backend 契约和 admin 职责边界。 |
