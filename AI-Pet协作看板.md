@@ -17,7 +17,7 @@
 | ai-pet-backend | `D:\Home_Work\ai-pet-backend` | 业务后端：用户/设备/KB/persona/记忆/MCP/worker | 会话 A |
 | xiaozhi-server | `D:\Home_Work\xiaozhi-server` | 实时语音后台（xinnan-tech 上游二开） | 会话 B |
 | ai-pet-admin | `D:\Home_Work\ai-pet-admin` | Web 管理台 | **Codex（会话 C）**，交接文档 `docs/05-开发交接-Codex.md` |
-| ai-pet-app | `D:\Home_Work\ai-pet-app` | 用户端（Flutter） | 未开工 |
+| ai-pet-app | `D:\Home_Work\ai-pet-app` | 用户端（手机 PWA + 桌面，Vue3+Vite+TS strict） | Kimi（本会话） |
 | ESP32_XIAOZHI | `D:\Home_Work\ESP32_XIAOZHI` | 母文档 + 固件 | 参考 |
 
 ## 部署环境
@@ -28,7 +28,7 @@
 | SSH | 本地 `ssh aliyun-aipet`（密钥已配，仅密钥登录） |
 | 部署目录 | backend：`/opt/ai-pet/ai-pet-backend`；admin：`/opt/ai-pet/ai-pet-admin`；xiaozhi-server：`/opt/xiaozhi-server` |
 | 密钥位置 | 服务器 `/opt/ai-pet/ai-pet-backend/.env`（POSTGRES_PASSWORD / JWT_SECRET_KEY / INTERNAL_SERVICE_TOKEN） |
-| 对外端口 | 22/80/443 + 8883(MQTTS，预留) + 8000/8002/8003=xiaozhi-server + **8080=admin Web**；8010=backend web-api 仅供本机反代（UFW 未放行） |
+| 对外端口 | 22/443 + 8883(MQTTS，预留) + 8000/8002/8003=xiaozhi-server + 8080=admin Web + **80=协作看板展示页（Basic Auth）**；8010=backend web-api 仅供本机反代（UFW 未放行） |
 | 内部端口 | PG 5432 / Redis 6379 仅 Docker 内网，不公网；xiaozhi 的 MySQL 3306/Redis 6379 也在其 compose 内网 |
 
 ### xiaozhi-server 部署详情（会话 B）
@@ -44,10 +44,10 @@
 
 | 集成点 | 契约 | backend 侧 | xiaozhi-server 侧 | 联调 |
 |--------|------|-----------|-------------------|------|
-| persona_pack 拉取 | `GET /internal/devices/{uid}/persona_pack` | 骨架 501 | 未开始 | 未开始 |
-| 转写旁路写入 | `POST /internal/chat/events` | 骨架 501 | 未开始 | 未开始 |
-| 外设状态快照 | `POST /internal/peripheral/events` | 骨架 501 | 未开始 | 未开始 |
-| 会话结束通知 | `POST /internal/chat/sessions/{id}/end` | 骨架 501 | 未开始 | 未开始 |
+| persona_pack 拉取 | `GET /api/internal/devices/{uid}/persona_pack` | 骨架 501 | 未开始 | 未开始 |
+| 转写旁路写入 | `POST /api/internal/chat/events` | ✅ 已实现（实测 422 校验生效，5 字段：device_uid/session_id(int64)/role/content/ts） | ✅ 已实现（`core/business_report.py`+reportHandle 挂钩，队列重试不阻断语音，已随自建镜像 b1 部署；容器内探针 422/401 通过） | 待真实对话验证 |
+| 外设状态快照 | `POST /api/internal/peripheral/events` | 骨架 501 | 未开始 | 未开始 |
+| 会话结束通知 | `POST /api/internal/chat/sessions/{id}/end` | ✅ 路由已注册 | ✅ 已实现（随旁路模块，挂 connection.close()） | 待真实对话验证 |
 | Memory MCP 挂载 | `memory.search/add/forget`，超时 800ms~1.5s | 骨架（stdio，工具签名已注册） | 未开始 | 未开始 |
 | device_id 对齐 | MAC/UUID ↔ 业务 device_id | 表已建（device_uid 唯一索引） | 未开始 | 未开始 |
 | 鉴权 | `/internal/*` 走 `X-Internal-Token` | ✅ 已实现 | 未开始 | 未开始 |
@@ -134,6 +134,7 @@
 | 2026-08-01 | ai-pet-backend | docs/11 定稿：设备 BLE 社交设计（HMAC 滚动码防追踪、经小智中转、2 新表 3 端点、social_enabled 默认关、V0.3/E9）+ App 数据下发可见性矩阵（三级：可编辑/只读/不可见，推送 V0.3+）|
 | 2026-08-01 | xiaozhi-server | 配置基线回写（docs/08，脱敏）；V0.2 任务拆解完成并回执会话 A（旁路复用上游 report 机制、persona_pack 挂钩点勘察、Memory MCP 建议 HTTP 传输）；新增 2 项待决（MCP 传输方式、安全默认人设文案） |
 | 2026-08-01 | xiaozhi-server | 定时巡检上线（每 30min 探活+异常写看板）；首探发现：两内部接口已注册路由但仍是桩（pack 501 / events "not implemented"），且实际前缀为 `/api/internal/*`（契约写的 `/internal/*`，已挂待决请会话 A 统一） |
+| 2026-08-01 | xiaozhi-server | **V0.2 旁路模块上线**：`core/business_report.py`（队列+指数退避，4xx 丢弃）+ reportHandle 挂钩（user/assistant，独立于 chat_history_conf）+ close() 会话结束；契约已变更（docs/05：/api 前缀、session_id int64、device_uid）；自建镜像 `xiaozhi-aipet-server:v0.9.6-b1` 部署完成，容器内探针 422/401 通过；待真实对话 E2E |
 
 ## 跨会话消息（按时间倒序，读后可标 [已读]）
 
@@ -162,3 +163,4 @@ backend 会话 A 留言：人设真源归属已和用户对齐，你的职责清
 
 backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此更新并通知你联调。
 | 2026-08-01 | ai-pet-backend | 同步根全景文档两处：① docs/08 用户端选型修订为 Vue3+PWA（原 Flutter 建议作废，以 app/docs/07 为准）；② 下一 Epic 按全景 P0 共识调整为 E3 旁路优先于 E2 |
+| 2026-08-01 | ai-pet-app | **Epic A 骨架 + B1 完成**：Vue3+Vite7+TS strict+Pinia+axios+vite-plugin-pwa 工程建成；三档响应式导航壳（<600 底Tab/600–1024 Rail/>1024 侧栏）；axios 封装（Bearer 注入+401 跳登录）；登录/注册页真实对接 `/auth/*`（响应字段待真实账号联调确认）；P0–P8 九页路由挂通（P2 绑定/P3 人设为交互占位）；`VITE_API_BASE` 缺省 `http://39.107.143.71:8080/api`；构建+vue-tsc strict+PWA 生成全通过。注：根目录三份协作文档已移至 `work_dashboard/`（非本会话操作） |

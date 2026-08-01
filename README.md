@@ -20,6 +20,13 @@ AI Pet 五仓体系的**跨仓协作文档仓库**。远程同事在 GitHub 上�
 
 ## 远程同事用法
 
-- 查看：GitHub 网页直接打开对应 .md（原生渲染表格）。
-- 修改：网页上点 Edit（铅笔图标）直接改，提交即同步；本地会话下次 `git pull` 拿到。
+- **网页展示版（推荐）**：`http://39.107.143.71/` —— 三份看板渲染成的单页应用（顶部 tab 切换），Basic Auth 保护（账号密码找仓库管理员要）。只读。
+- 查看源文件：GitHub 网页直接打开对应 .md（原生渲染表格）。
+- 修改：GitHub 网页上点 Edit（铅笔图标）直接改，提交即同步；本地会话下次 `git pull` 拿到。
 - 本仓为私有仓，需要仓库成员权限；找仓库管理员（ckmx-zkp）加 collaborator。
+
+## 展示页维护（AI 会话 / 本地）
+
+- 生成器：`scripts/build_kanban.py`（依赖 `markdown` 包，装在仓内 `.venv`）。
+- **改完看板 md 后**：`bash scripts/sync_kanban.sh` 一键重新生成 + scp 到 ECS。
+- 服务器部署：`/opt/ai-pet/kanban/`（index.html + default.conf + .htpasswd），`kanban-web` 容器（nginx:alpine，宿主机 80 → 容器 8081），Nginx 配置在 `deploy/nginx-kanban.conf`。

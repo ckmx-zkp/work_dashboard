@@ -1,0 +1,4 @@
+.venv/
+看板.html
+deploy/htpasswd.raw
+__pycache__/
