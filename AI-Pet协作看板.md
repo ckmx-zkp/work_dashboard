@@ -60,7 +60,7 @@
 - ✅ Epic A1 脚手架：FastAPI monorepo（web-api / memory-mcp / agent-worker / persona-compiler），CI 全绿
 - ✅ Alembic 初始迁移：14 业务表 + agent_tasks 队列表
 - ✅ **2026-08-01 首次部署完成**：5 容器全部 Up（web-api @8010、memory-mcp、agent-worker、pg16、redis），迁移已执行（15 表），healthz/401 验证通过，详见 `docs/09-部署进度与运维.md`
-- ⬜ 待实现业务能力：记忆 CRUD/审核与 Memory MCP 实库、agent-worker 处理器（daily_summary / memory_suggest / kb_feedback）、人设问卷与预览；已上线的 devices/persona/messages/analyses/peripheral 不在此列。
+- 🟡 已上线待配置/验收：`daily_summary` LLM worker（每日摘要、主题、情绪、跟进建议、候选/自动审核记忆、人设成长建议）、用户/管理端 memories CRUD 与审核、Memory MCP 实库；尚待提供 LLM URL/API/模型配置后处理真实会话。仍待实现：人设问卷与预览、KB 反馈候选到草稿的自动闭环。
 - ✅ KB 运营后端已上线：四元素、12 星座、16 型 MBTI 的 v1/v2 已发布，`/admin/kb/*` 支持草稿、版本递增、发布与反馈审核；尚缺“反馈候选→KB 草稿”的闭环。
 - ✅ **E1.1 已部署**：新增 `binding_id` 迁移；小智 `devices/seen` 首见生成绑定 ID；app `/devices/bind` 改按绑定 ID 认领；admin 调用用户 bind 返回 403。
 - ✅ **E2 已部署**：KB 种子（四元素、12 星座、16 型 MBTI）；用户 persona GET/PUT；内部 persona_pack 固定 7 字段。问卷、KB 管理与发布仍不属于本项。
@@ -75,7 +75,7 @@
 - ✅ B1.1 已部署：已撤除管理台用户 `/devices/bind` 入口，页面明确设备认领由用户端以 `binding_id` 完成；当前仅保留当前账号设备查看，管理端资产接口现已由 backend 提供，待前端改接。
 - ✅ 管理端设备资产/诊断接口已部署：`/api/admin/devices` 资产分页/详情、绑定码轮换、管理端人设、脱敏历史、外设快照和分析结果只读均可用；`GET /api/admin/devices/lookup?device_uid={MAC/SN}` 可精确读取当前 `binding_id`，不暴露或写入用户归属。
 - 🟡 **M2 人设设置**：用户侧与管理端人设页面、`GET/PUT` 接口均已部署；12 星座、16 型 MBTI 均可保存。未认领设备管理端写入返回 409；xiaozhi 侧仍待接入同一领域的内部 `persona_pack`。
-- 🟡 **M3 对话与记忆**：用户及管理端脱敏消息查询已部署（用户端删除亦已部署）；memory CRUD/approve/reject 及 Memory MCP 实库仍未完成。
+- 🟡 **M3 对话与记忆**：用户及管理端脱敏消息查询、用户/管理端 memories 列表与 candidate 审核、Memory MCP 实库均已部署；Admin/App 前端记忆页面待接入，真实候选等待 LLM worker 配置后产出。
 - 🟡 **M4 分析、外设与 KB 运营**：管理端与用户侧 analyses/peripheral 只读接口均已部署；`/admin/kb/*` 草稿、发布、反馈审核已部署，v2 人设 KB 已发布；外设持续上报与 worker 分析产出仍未完成。
 - ⏭ **admin 下一批改造顺序**：知识库运营前端（接 `/admin/kb/*`）→ 记忆管理/审核（待后端 memories 实现）→ 分析结果的空态、任务状态与筛选体验；资产、人设、历史、外设读取已可继续维护和验收。
 
@@ -113,14 +113,14 @@
 
 1. **知识库运营前端**：直接接已部署的 `/api/admin/kb/zodiac`、`/mbti`、发布和反馈审核端点；支持草稿编辑、审核后发布、版本与状态筛选。
 2. **现有设备运营体验**：围绕资产、绑定码、人设、脱敏历史、外设、分析增加筛选、空态、任务状态展示与验收提示，不需要等待小智新接口。
-3. **待后端解锁后接入**：记忆列表/编辑/审核页面；后端 memories 仍是 501 骨架，不能先伪造为已可用功能。
+3. **记忆管理前端**：直接接已部署的用户/管理端 memories 列表、编辑、归档、candidate 通过/驳回接口；候选数据将在 LLM worker 配置后出现。
 
 ### 已实现、可由 app 继续开发
 
 1. **外设状态页**：✅ app 已接入并部署 `GET /api/devices/{id}/peripheral`，展示最近快照、空态与手动刷新；待真机眼睛事件上报后完成真实数据验收。
 2. **分析与日运页**：先接 `GET /api/devices/{id}/analyses` 和导出接口，展示“暂无数据/等待夜间总结”；等 worker 有产出后无需重做接口层。
 3. **人设初始化体验**：在现有 GET/PUT 人设基础上补完整 12 星座、16 MBTI、愿望→`overrides` 映射、跳过默认值及“下次会话生效”的提示。
-4. **记忆页暂阻塞**：等 memories CRUD/审核与 Memory MCP 实库完成后再接入，避免假数据链路。
+4. **记忆页可直接开发**：接已有 memories CRUD/审核接口；LLM 未配置期间仅显示手工记忆或空态。
 
 ## 开发优先级（2026-08-01 会话 B 提议，待会话 A 确认）
 
@@ -241,3 +241,4 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-02 | ai-pet-app | C3 历史已接入 E4：按当前设备分页读取脱敏消息、按本地日期分组、按天确认删除（带 ISO 时间窗）；`typecheck`、`build` 通过，已部署 ECS `:8081`。 |
 | 2026-08-02 | ai-pet-app | **D1 外设状态已接入并部署**：调用用户端 `GET /devices/{id}/peripheral`，展示眼睛表情、视线、闭眼、可读扩展字段与更新时间；无设备及 404 无快照均为可恢复空态，支持手动刷新。同步更新人设全量种子提示；`typecheck`、`build` 通过，ECS `:8081` 首页 200、未登录外设接口预期 401。 |
 | 2026-08-02 | 项目看板 | **当前协作建议已校正**：小智 V0.2 的 persona_pack、聊天旁路、会话结束、首见设备和外设旁路代码均已部署，下一步为真机 E2E 落库验收；admin 可直接开发 KB 运营前端，app 可直接开发外设/分析展示与人设初始化；记忆页等待 backend memories/MCP 实库。 |
+| 2026-08-02 | ai-pet-backend | **LLM 成长链已部署**：提交 `18f09e2` + `14c62c4`；`daily_summary` worker 调用可配置 OpenAI 兼容接口，产出每日摘要、主题/情绪/跟进建议、LLM 审核记忆和人设成长建议；用户/管理端 memories 审核、Memory MCP 实库、应用私有人设建议接口已上线。未配置 LLM 时任务延后重试且不消耗次数，待填 `LLM_BASE_URL`、`LLM_API_KEY`、`LLM_MODEL` 后验收。 |
