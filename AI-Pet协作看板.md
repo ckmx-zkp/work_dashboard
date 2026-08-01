@@ -166,3 +166,4 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-01 | ai-pet-backend | 同步根全景文档两处：① docs/08 用户端选型修订为 Vue3+PWA（原 Flutter 建议作废，以 app/docs/07 为准）；② 下一 Epic 按全景 P0 共识调整为 E3 旁路优先于 E2 |
 | 2026-08-01 | ai-pet-app | **Epic A 骨架 + B1 完成**：Vue3+Vite7+TS strict+Pinia+axios+vite-plugin-pwa 工程建成；三档响应式导航壳（<600 底Tab/600–1024 Rail/>1024 侧栏）；axios 封装（Bearer 注入+401 跳登录）；登录/注册页真实对接 `/auth/*`（响应字段待真实账号联调确认）；P0–P8 九页路由挂通（P2 绑定/P3 人设为交互占位）；`VITE_API_BASE` 缺省 `http://39.107.143.71:8080/api`；构建+vue-tsc strict+PWA 生成全通过。注：根目录三份协作文档已移至 `work_dashboard/`（非本会话操作） |
 | 2026-08-02 | ai-pet-app | 修复 B1 认证契约：登录读取 `access_token`，注册成功后再登录；生产 API 改为同源 `/api`。`npm run typecheck` 与 `npm run build` 均通过，已将新构建部署至 ECS `:8081` 并重建 `ai-pet-app-web`；公网首页 200、未登录 `/api/auth/me` 返回预期 401。 |
+| 2026-08-02 | ai-pet-app | B2.1 手动绑定已接入：绑定页调用 `POST /devices/bind`，处理成功、409 冲突与 422 校验反馈；`typecheck`、`build` 通过，已部署 ECS `:8081`，公网新构建包含 `/devices/bind`。设备列表/详情仍待 B2.2。 |
