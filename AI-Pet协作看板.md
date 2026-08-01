@@ -119,13 +119,13 @@
 1. **真机 E2E 验收（最高优先）**：用真实设备依次证明 `devices/seen` 生成/更新资产、修改人设后 `persona_pack` 被拉取并改变下一会话 Prompt/默认表情、每轮 user/assistant 事件落入 backend、断开会话触发 `daily_summary` 入队、一次眼睛动作写入外设快照。
 2. **失败可观测性**：为上述旁路请求输出不含对话原文的状态码、重试次数、`device_uid`、`session_id` 日志/指标；确认 4xx 丢弃、5xx 有界重试且绝不阻塞语音/TTS。
 3. **Memory MCP 挂载暂不开发**：等待 backend 先实现 memories 实库并将 stdio 改为双方确认的 HTTP MCP 契约；届时按超时降级为“无记忆会话”。
-4. **Context Provider 合并（依赖后端 C5，见下）**：小智上游会在唤醒/构建 Prompt 时以 `device-id` 请求上下文源并替换 `{{ dynamic_context }}`。当前 persona_pack 在后续替换了最终 Prompt，动态上下文不会保留；待 backend 提供 C5 后，本仓将把固定基础行为 + backend persona_pack + 上游动态上下文合并为同一最终 Prompt。不得把完整 KB 或原始对话注入 Prompt。
+4. **Context Provider 合并（backend C5 已就绪，见下）**：小智上游会在唤醒/构建 Prompt 时以 `device-id` 请求上下文源并替换 `{{ dynamic_context }}`。本仓现在应把固定基础行为 + backend persona_pack + 上游动态上下文合并为同一最终 Prompt；不得把完整 KB 或原始对话注入 Prompt。
 
-### ai-pet-backend 待完成：C5 Context Provider（由 xiaozhi-server 提出，2026-08-02）
+### ai-pet-backend：C5 Context Provider（已部署，2026-08-02）
 
-**现状核实**：backend 当前没有 Context Provider 路由；已上线的 `persona_pack` 不是上游 Context Provider 响应格式，也不包含 `code/data` 包装。小智上游实现只会 `GET` 配置 URL，自动带 `device-id` 请求头，要求 HTTP 200 且 JSON `{"code": 0, "data": ...}`，单源超时 3 秒。
+**部署状态**：backend 提交 `85c05be` 已上线 `GET /api/internal/context/device`，真实设备带内部鉴权请求返回 HTTP 200。响应采用上游要求的 `{"code":0,"data":[...]}` 包装；未知/未认领/无数据空成功降级。
 
-**目标**：增加 `GET /api/internal/context/device`（路径待 backend 确认并先写入 backend docs/06 与本仓 docs/05）。读取 `device-id`（小写冒号 MAC，作为 `device_uid`），采用内部服务鉴权 `X-Internal-Token`；token 仅置于小智容器本地配置/部署密钥，不写智控台、仓库或看板。
+**小智待办**：在容器本地配置该 URL 与 `X-Internal-Token`，合并固定基础行为、persona_pack 与 `dynamic_context`，再完成真机唤醒验收；token 仅置于容器配置/部署密钥，不写智控台、仓库或看板。
 
 **响应契约（建议定稿）**：未知设备、未认领设备或无可用上下文均返回 `200 {"code":0,"data":[]}`，避免每次唤醒报错；正常响应返回不超过 6 条、总计不超过约 800 中文字符的字符串列表，例如：
 
@@ -133,7 +133,7 @@
 {"code": 0, "msg": "success", "data": ["当前陪伴风格：……", "今日可用的星座/MBTI 知识摘要：……"]}
 ```
 
-**数据边界与性能**：只读已发布 KB 中与设备当前人设相关的短摘要，后续可追加已审核记忆/当天分析摘要；不返回完整 KB、原始聊天、敏感字段或内部 ID；不得在请求中调用 LLM/worker，目标 P95 < 300ms，失败按空数据降级。深度知识问答仍待后续 Memory MCP/RAG 工具，不由 Context Provider 承担。
+**数据边界与性能**：当前只读最近 36 小时 `daily_summary` 的摘要/跟进事项及已确认 `active` 记忆；稳定 dossier、星座/MBTI、KB、已应用 overrides 已在 persona_pack，明确不重复注入。不返回完整 KB、原始聊天、候选记忆、敏感字段或内部 ID；不得同步调用 LLM/worker，目标 P95 < 300ms，失败按空数据降级。深度知识问答仍待后续 Memory MCP/RAG 工具，不由 Context Provider 承担。
 
 **验收**：容器内带 `device-id` + 内部 token 的 GET 返回契约 JSON；智控台配置该内部 URL 后，真机唤醒时日志确认一次拉取，最终 Prompt 含摘要但不含密钥/原始对话；接口慢、5xx、空人设均不阻塞首轮语音。
 
@@ -280,5 +280,6 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-02 | ai-pet-backend | **稳定角色档案已部署**：提交 `7659734`，迁移 `0007_persona_dossier` 已执行；`GET/PUT persona` 及 Admin 对应写入新增 `dossier`（身份、背景、角色、目标、进化规则、关系），其内容在下次会话编译进固定 7 字段 `persona_pack` 的提示片段。视觉与档案内容 AI 生成需求见 backend `prompt生成需求.md`（提交 `cc9affc`）。 |
 | 2026-08-02 | 项目看板 | **Admin/App 开发前置已更新**：角色档案 `dossier`、用户/管理端 memories 审核、LLM 每日摘要与人设成长分析均有已部署接口；Admin 可立即开发档案编辑器、记忆审核页、KB 运营页与分析卡片，App 可立即开发“我的星仔”、记忆页、今日小记/成长建议与外设状态页。 |
 | 2026-08-02 | ai-pet-backend | 本仓 `docs/09-部署进度与运维.md` 与 `docs/10-后端开发计划.md` 已同步（提交 `d2eb8c5`）：记录 LLM 成长链、记忆实库、角色档案上线事实，并将后续重点调整为记忆画像、人设问卷/预览、KB draft 闭环与运营监控。 |
+| 2026-08-02 | ai-pet-backend / xiaozhi-server | **C5 Context Provider 已部署**：backend 提交 `85c05be` 新增 `GET /api/internal/context/device`，内部鉴权真实设备请求 200；仅返回动态 `daily_summary`/follow-up 与 active memories，稳定 dossier/KB/星座/MBTI 仍只由 persona_pack 注入，避免 Prompt 重复。小智待配置 URL/token、合并最终 Prompt 并真机验收。 |
 | 2026-08-02 | ai-pet-app | **原型核对后完成 C2 + D2 并部署**：记忆页接入用户端 memories 列表/搜索、手动新建、归档删除与 candidate 通过/忽略；日运/小记页接入 `daily_summary` analyses，兼容无结果等待态。`typecheck`、`build` 通过，ECS `:8081` 首页 200；未登录 memories/analyses 均预期 401。D3 导出与人设问卷仍因后端 501 阻塞。 |
 | 2026-08-02 | ai-pet-app | **C4 首页“我的星仔”已完成**：对当前选中设备读取 persona，展示星座、MBTI、知识库版本与跟随策略；切换设备重新请求，404 为“未设置人设”空态并保留设置入口。原型核对与后续计划已回写 app 文档；`typecheck`、`build` 通过，待真实账号设备完成受保护接口验收。 |
