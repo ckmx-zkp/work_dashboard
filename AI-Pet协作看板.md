@@ -221,6 +221,7 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-02 | ai-pet-admin | 人设星座下拉改为中文显示、英文稳定键提交（例如“双鱼座”→`pisces`）；构建通过并部署 ECS `:8080`。 |
 | 2026-08-02 | ai-pet-admin | 管理端脱敏历史接入时间窗口筛选与 offset 分页（每页 20 条）；保持管理员只读边界，不提供删除入口。构建通过并部署 ECS `:8080`。 |
 | 2026-08-02 | ai-pet-admin | **KB 运营已部署**：管理端接入 KB v2 的星座/元素与 MBTI 列表、草稿创建/编辑、不可逆发布确认，以及反馈候选接受/忽略；构建通过，ECS `:8080` 首页与新资源返回 200。 |
+| 2026-08-02 | ai-pet-admin | **记忆审核已部署**：管理端可按关键词/状态分页查询设备记忆，并对 candidate 执行接受或驳回；构建通过，ECS `:8080` 首页与新资源返回 200。 |
 | 2026-08-02 | ai-pet-admin / ai-pet-backend | 补齐 admin 依赖与进度：M1+B1 已部署，但用户绑定入口因设备归属契约变更待回退；管理端资产接口等待 E1.1。M2 等 persona，M3 等 messages/memories，M4 等 analyses/peripheral/admin KB。 |
 | 2026-08-02 | ai-pet-backend | E1.1+E2+E4 本地实现完成、待人工 review/部署：binding_id 设备认领与 admin 禁绑；四元素/双鱼/INFP/ISFP 种子、人设读写、内部 persona_pack 七字段；对话历史分页与带时间窗的审计删除。ruff+mypy+pytest（56）通过。 |
 | 2026-08-02 | ai-pet-backend | **E1.1+E2+E4 已部署**：服务器提交 `1b356ae`，迁移至 `0005_devices_binding_id`，web-api 健康检查 200。admin 可开始 M2 人设页；app 须先改为 binding_id 绑定后可接人设与历史；xiaozhi 可接 persona_pack，仍须修复字符串 session_id、接入 devices/seen 与外设上报。 |
