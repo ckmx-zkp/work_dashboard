@@ -45,11 +45,11 @@
 | 集成点 | 契约 | backend 侧 | xiaozhi-server 侧 | 联调 |
 |--------|------|-----------|-------------------|------|
 | persona_pack 拉取 | `GET /api/internal/devices/{uid}/persona_pack` | ✅ 已部署（E2）：固定 7 字段；未配置人设返回 404 | 未实现会话开始单次拉取、缓存、Prompt 注入与 `default_emotion` 映射 | 未开始 |
-| 转写旁路写入 | `POST /api/internal/chat/events` | ✅ 已实现（**当前真契约**：5 字段，`session_id`=字符串 UUID） | ⚠️ 队列+挂钩已部署且内网/鉴权可达；仍发送旧 int64 `business_session_no`，真实设备实测 422 后丢弃 | 未联通 |
+| 转写旁路写入 | `POST /api/internal/chat/events` | ✅ 已实现（**当前真契约**：5 字段，`session_id`=字符串 UUID） | 🟡 已改为原生字符串 UUID 并随自建镜像 `v0.9.6-b2` 部署；待真机提交 user/assistant 两条事件验收 | 待验收 |
 | 外设状态快照 | `POST /api/internal/peripheral/events` | 路由实现状态待部署确认 | 未实现：眼睛状态变化未异步上报、未做去重/枚举映射 | 未开始 |
-| 会话结束通知 | `POST /api/internal/chat/sessions/{id}/end` | ✅ 路由已注册 | ⚠️ 已挂 `connection.close()`，但仍使用旧 int64 会话号，真实设备实测 404 | 未联通 |
+| 会话结束通知 | `POST /api/internal/chat/sessions/{id}/end` | ✅ 路由已注册 | 🟡 已改用连接原生字符串 UUID 并随 `v0.9.6-b2` 部署；待一次真实断开会话验收 | 待验收 |
 | Memory MCP 挂载 | `memory.search/add/forget`，超时 800ms~1.5s | 骨架（stdio，工具签名已注册） | 未开始 | 未开始 |
-| device_id 对齐 | 小写冒号 MAC `device_uid`（如 `8c:fd:49:0c:a8:78`） | ✅ 已部署：`devices/seen` 以 MAC 建立资产，生成独立 app `binding_id` | ⚠️ 对话旁路已用 MAC；尚未在会话开始调用 `devices/seen` | 未联通 |
+| device_id 对齐 | 小写冒号 MAC `device_uid`（如 `8c:fd:49:0c:a8:78`） | ✅ 已部署：`devices/seen` 以 MAC 建立资产，生成独立 app `binding_id` | 🟡 连接时已规范化 MAC 并异步调用 `devices/seen`，随 `v0.9.6-b2` 部署；待查 backend 资产记录验收 | 待验收 |
 | 鉴权 | `/api/internal/*` 走 `X-Internal-Token` | ✅ 已实现 | ✅ 已配置并随旁路请求发送；真实请求到达 backend | 已联通 |
 
 状态值约定：`未开始 / 骨架 / 已实现 / 已联调`
@@ -96,7 +96,7 @@
 - ✅ 上游 v0.9.6 源码钉版并首推 GitHub（ckmx-zkp/aipet-xiaozhi-server-）
 - ✅ 全模块部署到 39.107.143.71 `/opt/xiaozhi-server`（4 容器正常；安全组+ufw 已放 8000/8002/8003；MySQL 弱密码已换）
 - ✅ 修复三处部署坑：OTA 下发占位域名（`server.fronted_url`/`server.ota`/`server.websocket` 已指向公网地址）、`server.auth_key` 与 `server.secret` 不一致（真机连不上的隐患）
-- ✅ 模型链路：LLM=GLM-4.5-Flash（默认，备用 Kimi K2.7）；ASR=豆包流式 2.0（试用 20h）；TTS=火山双向流式·湾湾小何（`zh_female_wanwanxiaohe_moon_bigtts`）
+- ✅ 模型链路：LLM=千帆 `qianfan-code-latest`（主用；GLM-4.5-Flash/Kimi K2.7 保留备用）；ASR=豆包流式 2.0（试用 20h）；TTS=火山双向流式·湾湾小何（`zh_female_wanwanxiaohe_moon_bigtts`）
 - ✅ 真机 `8c:fd:49:0c:a8:78` 激活绑定+首轮对话联通（唤醒→ASR→GLM 人设→TTS→眼睛 emotion 联动）；固件联调看板：`AI-Pet固件联调看板.md`（本目录）
 - ⚠️ V0.2 业务集成：内网与内部鉴权已联通，backend E2 `persona_pack` 已上线，但小智尚未拉取、缓存并注入；旁路/会话结束仍发旧 int64 `session_id`，与 backend 字符串 UUID 契约冲突（真实设备 events=422、end=404）；`devices/seen`、外设状态旁路均未实现。Memory MCP 暂缓，待 backend 定传输。
 
@@ -192,6 +192,8 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-02 | ai-pet-backend | 契约变更：设备身份分离为 MAC `device_uid`、后端平台 `devices.id`、app 认领 `binding_id`；E1.1 将实现绑定 ID 生成、app 认领及 admin 禁止用户绑定。 |
 | 2026-08-02 | xiaozhi-server / ai-pet-backend | 真实设备联调核实：`/api/internal/*` 内网可达且 `X-Internal-Token` 生效；业务未联通。小智旁路仍发 int64 `session_id`，与 backend 字符串 UUID 契约冲突，events 实测 422、session end 实测 404；`persona_pack` 仍 501，`devices/seen` 与外设状态旁路未实现。需先统一 xiaozhi docs/05 与 backend docs/06 的字符串会话契约，再实施 V0.2。 |
 | 2026-08-02 | xiaozhi-server | **修复打断后的过期眼睛工具调用**：根因是新一轮语音会把共享 `client_abort` 重置为 `False`，旧 LLM 后台任务随后仍执行 MCP。提交 `5238938` 为每轮对话分配不可复用 turn ID；打断/新语音会使旧轮次的 LLM 输出、工具结果与尚未执行的 MCP 调用失效。已构建并部署 `xiaozhi-aipet-server:v0.9.6-b2`，容器已启动；待真机执行“向上看→立即打断→向下看”回归验证。 |
+| 2026-08-02 | xiaozhi-server | 模型主链切换：智能体“测试1”主 LLM 已从受限的 GLM-4.5-Flash 改为千帆 Coding Plan OpenAI 兼容端点，模型 `qianfan-code-latest`；密钥仅存服务器模型配置，不入仓/看板。服务器直连探测返回 200（当前别名实际路由至 `glm-5.1`）；管理服务已重启清缓存，下一次设备重连生效。 |
+| 2026-08-02 | ai-pet-admin | **B1.1 管理端资产能力已部署**：管理员可检索设备资产（含 MAC/SN 精确查询）、查看/轮换 `binding_id`，并在设备详情读取或配置人设、查看脱敏历史、外设状态和分析。生产构建通过；ECS `:8080` 首页和新 JS 资源均返回 200。 |
 | 2026-08-02 | ai-pet-admin / ai-pet-backend | 补齐 admin 依赖与进度：M1+B1 已部署，但用户绑定入口因设备归属契约变更待回退；管理端资产接口等待 E1.1。M2 等 persona，M3 等 messages/memories，M4 等 analyses/peripheral/admin KB。 |
 | 2026-08-02 | ai-pet-backend | E1.1+E2+E4 本地实现完成、待人工 review/部署：binding_id 设备认领与 admin 禁绑；四元素/双鱼/INFP/ISFP 种子、人设读写、内部 persona_pack 七字段；对话历史分页与带时间窗的审计删除。ruff+mypy+pytest（56）通过。 |
 | 2026-08-02 | ai-pet-backend | **E1.1+E2+E4 已部署**：服务器提交 `1b356ae`，迁移至 `0005_devices_binding_id`，web-api 健康检查 200。admin 可开始 M2 人设页；app 须先改为 binding_id 绑定后可接人设与历史；xiaozhi 可接 persona_pack，仍须修复字符串 session_id、接入 devices/seen 与外设上报。 |
@@ -202,4 +204,5 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-02 | ai-pet-app | B2.1 已迁移至 backend E1.1 正式 `binding_id` 认领：移除 MAC 直绑，补齐 403/404/409/422 提示；`typecheck`、`build` 通过，已部署 ECS `:8081`，公网构建含 `binding_id`。 |
 | 2026-08-02 | ai-pet-app | C1 人设设置已接入 E2：绑定成功后以设备 ID 进入页面，读取/保存星座、MBTI、忌口、钉扎；处理未配置 404 与种子未发布 422。`typecheck`、`build` 通过，已部署 ECS `:8081`；待真实绑定码与普通用户账号完成写入验收。 |
 | 2026-08-02 | ai-pet-backend / ai-pet-admin | **管理端设备资产接口已部署**：提交 `f3fe729` + `4bf21e1` 已部署到 ECS，web-api 健康检查 200。admin 可按 MAC/SN 使用 `GET /api/admin/devices/lookup?device_uid=` 精确查询当前 `binding_id`，并可接入资产、绑定码轮换、人设、脱敏历史、外设和分析只读页面；记忆、KB 与用户侧分析/外设仍待后端实现。 |
+| 2026-08-02 | ai-pet-backend / 生产权限 | 经产品授权，生产账号 `admin` 已提升为 `role=admin` 并已核验；该账号须重新登录以签发含管理员角色的新 JWT。未记录密码。 |
 | 2026-08-02 | 项目看板 | 已拉取五个项目仓最新提交，并核对 ECS 容器状态；后端 E1.1/E2/E4、用户端绑定码认领、管理台 B1.1 均已上线。项目全景已同步为面向项目经理的交付、风险与下一步摘要。 |
