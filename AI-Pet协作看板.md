@@ -76,7 +76,7 @@
 - ✅ 管理端设备资产/诊断接口已部署：`/api/admin/devices` 资产分页/详情、绑定码轮换、管理端人设、脱敏历史、外设快照和分析结果只读均可用；`GET /api/admin/devices/lookup?device_uid={MAC/SN}` 可精确读取当前 `binding_id`，不暴露或写入用户归属。
 - 🟡 **M2 人设设置**：用户侧与管理端人设页面、`GET/PUT` 接口均已部署；12 星座、16 型 MBTI 均可保存。未认领设备管理端写入返回 409；xiaozhi 侧仍待接入同一领域的内部 `persona_pack`。
 - 🟡 **M3 对话与记忆**：用户及管理端脱敏消息查询已部署（用户端删除亦已部署）；memory CRUD/approve/reject 及 Memory MCP 实库仍未完成。
-- 🟡 **M4 分析、外设与 KB 运营**：管理端与用户侧 analyses/peripheral 只读接口均已部署；外设已有内部写入端点，但小智持续上报仍待验收；`/admin/kb/*`、feedback accept/ignore 和 worker 分析产出仍未完成。
+- 🟡 **M4 分析、外设与 KB 运营**：管理端与用户侧 analyses/peripheral 只读接口均已部署；`/admin/kb/*` 草稿、发布、反馈审核已部署，v2 人设 KB 已发布；外设持续上报与 worker 分析产出仍未完成。
 - ⏭ **admin 下一批改造顺序**：先移除用户绑定入口并改接 E1.1 管理端资产接口 → M2 人设 → M3 历史/记忆 → M4 分析/外设/KB。
 
 ### ai-pet-app（用户端）依赖快照（2026-08-02）
@@ -212,5 +212,6 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-02 | ai-pet-backend / 设备归属 | 经产品授权，设备资产 ID 2（`8c:fd:49:0c:a8:78`）已从 `admin` 迁移认领至 `admin123`；核心 ID、平台 ID、绑定码和历史均未删除，审计动作 `device_reassign` 已写入。`admin123` 须重新登录后在 App 获取最新设备列表。 |
 | 2026-08-02 | ai-pet-backend | **完整人设种子已部署**：提交 `6e5fbdf`，迁移 `0006_complete_persona_kb_seed` 已执行；生产库核验 12 个 published 星座、16 个 published MBTI，web-api 健康检查 200。管理台/App 现有全部星座和 MBTI 下拉值均可保存。 |
 | 2026-08-02 | ai-pet-backend | **用户侧分析/外设读取接口已部署**：提交 `a0595e5`，`GET /devices/{id}/analyses` 与 `GET /devices/{id}/peripheral` 已按设备归属鉴权上线；59 项测试通过、web-api 健康检查 200。外设可读已有快照，分析待 worker 处理器产出。 |
+| 2026-08-02 | ai-pet-backend | **KB v2 已审核发布**：提交 `9b5d2e6` 上线 `/admin/kb/*` 的星座/MBTI 草稿、发布与反馈审核能力；v2 文件导入后完成 AI 审核，12 条星座 + 16 条 MBTI 从 draft 发布为 v2，补齐运行时 `default_emotion` 并写入 28 条审计。`follow_latest=true` 设备下次拉取 persona_pack 自动采用 v2。 |
 | 2026-08-02 | 项目看板 | 已拉取五个项目仓最新提交，并核对 ECS 容器状态；后端 E1.1/E2/E4、用户端绑定码认领、管理台 B1.1 均已上线。项目全景已同步为面向项目经理的交付、风险与下一步摘要。 |
 | 2026-08-02 | ai-pet-app | B2.2 已接入并部署：首页 `GET /devices` 展示设备摘要、切换并持久化当前设备；绑定成功自动设为当前设备，人设页可复用该设备 ID。`typecheck`、`build` 通过，ECS `:8081` 公网首页 200。 |
