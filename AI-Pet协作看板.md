@@ -44,9 +44,9 @@
 
 | 集成点 | 契约 | backend 侧 | xiaozhi-server 侧 | 联调 |
 |--------|------|-----------|-------------------|------|
-| persona_pack 拉取 | `GET /api/internal/devices/{uid}/persona_pack` | ✅ 已部署（E2）：固定 7 字段；未配置人设返回 404 | 未实现会话开始单次拉取、缓存、Prompt 注入与 `default_emotion` 映射 | 未开始 |
+| persona_pack 拉取 | `GET /api/internal/devices/{uid}/persona_pack` | ✅ 已部署（E2）：固定 7 字段；未配置人设返回 404 | 🟡 已随 `v0.9.6-b4` 部署：连接首次拉取 + 默认 300 秒定时刷新、缓存/onboarding 降级、pack 变化时 Prompt/`default_emotion` 更新 | 待真机人设变更验收 |
 | 转写旁路写入 | `POST /api/internal/chat/events` | ✅ 已实现（**当前真契约**：5 字段，`session_id`=字符串 UUID） | 🟡 已改为原生字符串 UUID 并随自建镜像 `v0.9.6-b2` 部署；待真机提交 user/assistant 两条事件验收 | 待验收 |
-| 外设状态快照 | `POST /api/internal/peripheral/events` | 路由实现状态待部署确认 | 未实现：眼睛状态变化未异步上报、未做去重/枚举映射 | 未开始 |
+| 外设状态快照 | `POST /api/internal/peripheral/events` | ✅ 已实现：单行全量覆盖写 | 🟡 已随 `v0.9.6-b4` 部署：成功的眼睛 MCP 调用映射 emotion/gaze/closed 并异步上报 | 待真机眼睛动作验收 |
 | 会话结束通知 | `POST /api/internal/chat/sessions/{id}/end` | ✅ 路由已注册 | 🟡 已改用连接原生字符串 UUID 并随 `v0.9.6-b2` 部署；待一次真实断开会话验收 | 待验收 |
 | Memory MCP 挂载 | `memory.search/add/forget`，超时 800ms~1.5s | 骨架（stdio，工具签名已注册） | 未开始 | 未开始 |
 | device_id 对齐 | 小写冒号 MAC `device_uid`（如 `8c:fd:49:0c:a8:78`） | ✅ 已部署：`devices/seen` 以 MAC 建立资产，生成独立 app `binding_id` | 🟡 连接时已规范化 MAC 并异步调用 `devices/seen`，随 `v0.9.6-b2` 部署；待查 backend 资产记录验收 | 待验收 |
@@ -98,7 +98,7 @@
 - ✅ 修复三处部署坑：OTA 下发占位域名（`server.fronted_url`/`server.ota`/`server.websocket` 已指向公网地址）、`server.auth_key` 与 `server.secret` 不一致（真机连不上的隐患）
 - ✅ 模型链路：LLM=千帆 `qianfan-code-latest`（主用；GLM-4.5-Flash/Kimi K2.7 保留备用）；ASR=豆包流式 2.0（试用 20h）；TTS=火山双向流式·湾湾小何（`zh_female_wanwanxiaohe_moon_bigtts`）
 - ✅ 真机 `8c:fd:49:0c:a8:78` 激活绑定+首轮对话联通（唤醒→ASR→GLM 人设→TTS→眼睛 emotion 联动）；固件联调看板：`AI-Pet固件联调看板.md`（本目录）
-- ⚠️ V0.2 业务集成：内网与内部鉴权已联通，backend E2 `persona_pack` 已上线，但小智尚未拉取、缓存并注入；旁路/会话结束仍发旧 int64 `session_id`，与 backend 字符串 UUID 契约冲突（真实设备 events=422、end=404）；`devices/seen`、外设状态旁路均未实现。Memory MCP 暂缓，待 backend 定传输。
+- 🟡 V0.2 业务集成：内网与内部鉴权已联通；`v0.9.6-b4` 已实现 persona_pack 定时刷新/缓存/onboarding、眼睛 MCP 外设状态旁路，`v0.9.6-b2` 已改为 MAC + 原生字符串 UUID 的 devices/seen、chat events、session end。四项均待真机 E2E 落库证据；Memory MCP 暂缓，待 backend 定传输。
 
 ## 开发优先级（2026-08-01 会话 B 提议，待会话 A 确认）
 
@@ -193,6 +193,7 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-02 | xiaozhi-server / ai-pet-backend | 真实设备联调核实：`/api/internal/*` 内网可达且 `X-Internal-Token` 生效；业务未联通。小智旁路仍发 int64 `session_id`，与 backend 字符串 UUID 契约冲突，events 实测 422、session end 实测 404；`persona_pack` 仍 501，`devices/seen` 与外设状态旁路未实现。需先统一 xiaozhi docs/05 与 backend docs/06 的字符串会话契约，再实施 V0.2。 |
 | 2026-08-02 | xiaozhi-server | **修复打断后的过期眼睛工具调用**：根因是新一轮语音会把共享 `client_abort` 重置为 `False`，旧 LLM 后台任务随后仍执行 MCP。提交 `5238938` 为每轮对话分配不可复用 turn ID；打断/新语音会使旧轮次的 LLM 输出、工具结果与尚未执行的 MCP 调用失效。已构建并部署 `xiaozhi-aipet-server:v0.9.6-b2`，容器已启动；待真机执行“向上看→立即打断→向下看”回归验证。 |
 | 2026-08-02 | xiaozhi-server | 模型主链切换：智能体“测试1”主 LLM 已从受限的 GLM-4.5-Flash 改为千帆 Coding Plan OpenAI 兼容端点，模型 `qianfan-code-latest`；密钥仅存服务器模型配置，不入仓/看板。服务器直连探测返回 200（当前别名实际路由至 `glm-5.1`）；管理服务已重启清缓存，下一次设备重连生效。 |
+| 2026-08-02 | xiaozhi-server | **V0.2 人设与外设链已部署**：提交 `beb769d`；`persona_pack` 连接首次拉取后默认每 300 秒刷新，按 remote→缓存→onboarding 降级，内容变化时替换 Prompt 并应用默认表情；成功的眼睛 MCP 调用异步写 `peripheral/events` 全量快照。镜像 `xiaozhi-aipet-server:v0.9.6-b4` 已运行，容器内编译通过；待真机/后端落库 E2E。 |
 | 2026-08-02 | ai-pet-admin | **B1.1 管理端资产能力已部署**：管理员可检索设备资产（含 MAC/SN 精确查询）、查看/轮换 `binding_id`，并在设备详情读取或配置人设、查看脱敏历史、外设状态和分析。生产构建通过；ECS `:8080` 首页和新 JS 资源均返回 200。 |
 | 2026-08-02 | ai-pet-admin | 设备详情的管理员人设、脱敏历史、分析、外设能力已开放侧栏入口：依据最近选择的设备直达相应标签；未选设备先回资产列表。记忆管理和知识库仍因后端未实现保持禁用。构建通过并部署 ECS `:8080`。 |
 | 2026-08-02 | ai-pet-admin | 人设星座下拉改为中文显示、英文稳定键提交（例如“双鱼座”→`pisces`）；构建通过并部署 ECS `:8080`。 |
