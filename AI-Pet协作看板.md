@@ -72,8 +72,8 @@
 - ✅ ECS HTTP 部署完成：Nginx 容器监听 `8080`，`/api/*` 同源反代到本机 backend `8010`；首页/SPA 路由 200，`/api/auth/me` 未登录返回 401，链路正常。
 - ✅ 阿里云安全组与 UFW 均已放行 TCP 8080；公网 `http://39.107.143.71:8080/` 可达，真实账号登录、进入设备页、刷新保持登录均验证通过，浏览器控制台无错误。
 - ℹ️ 已停止使用 Codex Sites；同源反代模式不需要 backend 增加 CORS 白名单。
-- ✅ 已接入 devices 五端点：列表的 `online` 在线状态、绑定、详情、改名、解绑/重绑均可联调；B1 已重新部署至 ECS:8080。
-- ⚠️ **设备绑定行为待回退/改造**：现有 admin B1 调用用户 `/devices/bind`，会占用 `devices.user_id` 并阻塞 app 认领；按 2026-08-02 新契约，admin 不再绑定或认领设备。E1.1 上线后改为管理端设备资产查看/诊断接口，用户 app 仅以 `binding_id` 认领。
+- ✅ B1.1 已部署：已撤除管理台用户 `/devices/bind` 入口，页面明确设备认领由用户端以 `binding_id` 完成；当前仅保留当前账号设备查看，管理端资产接口仍待后端提供。
+- ⬜ 管理端设备资产/诊断接口：E1.1 已完成用户绑定身份修正，但 `/admin/devices/*` 尚未提供；接口就绪后再实现真实资产查看、诊断与授权管理。
 - ⬜ **M2 人设设置**：用户侧 `GET/PUT /devices/{id}/persona` 已随 E2 部署，app 可直接接入；admin 可先开发表单，但要操作真实用户设备仍需 backend 提供独立的 admin 设备资产/人设授权接口，不能复用用户归属接口。xiaozhi 侧还依赖同一领域的内部 `persona_pack`。
 - ⬜ **M3 对话与记忆**：依赖 `GET/DELETE /devices/{id}/messages`、memory CRUD/approve/reject，以及 Memory MCP 接真实库；当前后端均未实现。
 - ⬜ **M4 分析、外设与 KB 运营**：依赖 `GET /devices/{id}/analyses`、`GET /devices/{id}/peripheral`，以及 `/admin/kb/*`、feedback accept/ignore；当前后端均未实现。外设事件的小智侧上报也尚未完成。
@@ -194,6 +194,7 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-02 | ai-pet-admin / ai-pet-backend | 补齐 admin 依赖与进度：M1+B1 已部署，但用户绑定入口因设备归属契约变更待回退；管理端资产接口等待 E1.1。M2 等 persona，M3 等 messages/memories，M4 等 analyses/peripheral/admin KB。 |
 | 2026-08-02 | ai-pet-backend | E1.1+E2+E4 本地实现完成、待人工 review/部署：binding_id 设备认领与 admin 禁绑；四元素/双鱼/INFP/ISFP 种子、人设读写、内部 persona_pack 七字段；对话历史分页与带时间窗的审计删除。ruff+mypy+pytest（56）通过。 |
 | 2026-08-02 | ai-pet-backend | **E1.1+E2+E4 已部署**：服务器提交 `1b356ae`，迁移至 `0005_devices_binding_id`，web-api 健康检查 200。admin 可开始 M2 人设页；app 须先改为 binding_id 绑定后可接人设与历史；xiaozhi 可接 persona_pack，仍须修复字符串 session_id、接入 devices/seen 与外设上报。 |
+| 2026-08-02 | ai-pet-admin | **B1.1 已部署**：撤除管理台调用用户 `/devices/bind` 的入口，设备认领改由用户端 `binding_id` 流程负责；生产构建通过、ECS:8080 首页探活 200。 |
 | 2026-08-02 | 跨仓权限边界 | 补正 admin M2 依赖：E2 persona 是用户拥有设备 API，app 可直接接入；admin 不可再以绑定占用用户归属，需后端另实现 admin 设备资产/人设授权接口后才能管理真实用户设备。 |
 | 2026-08-02 | ai-pet-app | 新增“用户端依赖快照”：明确 app 不以 admin 为运行时依赖；设备认领等待 backend E1.1 `binding_id` 与 admin 资产接口改造，人设/记忆/历史/外设/分析/导出依赖按端点状态列明。 |
 | 2026-08-02 | ai-pet-app | B2.1 已迁移至 backend E1.1 正式 `binding_id` 认领：移除 MAC 直绑，补齐 403/404/409/422 提示；`typecheck`、`build` 通过，已部署 ECS `:8081`，公网构建含 `binding_id`。 |
