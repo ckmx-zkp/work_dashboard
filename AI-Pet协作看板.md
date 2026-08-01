@@ -72,11 +72,11 @@
 - ✅ ECS HTTP 部署完成：Nginx 容器监听 `8080`，`/api/*` 同源反代到本机 backend `8010`；首页/SPA 路由 200，`/api/auth/me` 未登录返回 401，链路正常。
 - ✅ 阿里云安全组与 UFW 均已放行 TCP 8080；公网 `http://39.107.143.71:8080/` 可达，真实账号登录、进入设备页、刷新保持登录均验证通过，浏览器控制台无错误。
 - ℹ️ 已停止使用 Codex Sites；同源反代模式不需要 backend 增加 CORS 白名单。
-- ✅ B1.1 已部署：已撤除管理台用户 `/devices/bind` 入口，页面明确设备认领由用户端以 `binding_id` 完成；当前仅保留当前账号设备查看，管理端资产接口仍待后端提供。
-- ⬜ 管理端设备资产/诊断接口：E1.1 已完成用户绑定身份修正，但 `/admin/devices/*` 尚未提供；接口就绪后再实现真实资产查看、诊断与授权管理。
-- ⬜ **M2 人设设置**：用户侧 `GET/PUT /devices/{id}/persona` 已随 E2 部署，app 可直接接入；admin 可先开发表单，但要操作真实用户设备仍需 backend 提供独立的 admin 设备资产/人设授权接口，不能复用用户归属接口。xiaozhi 侧还依赖同一领域的内部 `persona_pack`。
-- ⬜ **M3 对话与记忆**：依赖 `GET/DELETE /devices/{id}/messages`、memory CRUD/approve/reject，以及 Memory MCP 接真实库；当前后端均未实现。
-- ⬜ **M4 分析、外设与 KB 运营**：依赖 `GET /devices/{id}/analyses`、`GET /devices/{id}/peripheral`，以及 `/admin/kb/*`、feedback accept/ignore；当前后端均未实现。外设事件的小智侧上报也尚未完成。
+- ✅ B1.1 已部署：已撤除管理台用户 `/devices/bind` 入口，页面明确设备认领由用户端以 `binding_id` 完成；当前仅保留当前账号设备查看，管理端资产接口现已由 backend 提供，待前端改接。
+- ✅ 管理端设备资产/诊断接口已部署：`/api/admin/devices` 资产分页/详情、绑定码轮换、管理端人设、脱敏历史、外设快照和分析结果只读均可用；`GET /api/admin/devices/lookup?device_uid={MAC/SN}` 可精确读取当前 `binding_id`，不暴露或写入用户归属。
+- 🟡 **M2 人设设置**：用户侧 `GET/PUT /devices/{id}/persona` 与管理端 `GET/PUT /admin/devices/{id}/persona` 均已部署；未认领设备管理端写入返回 409。admin 前端页面待接入，xiaozhi 侧仍待接入同一领域的内部 `persona_pack`。
+- 🟡 **M3 对话与记忆**：用户及管理端脱敏消息查询已部署（用户端删除亦已部署）；memory CRUD/approve/reject 及 Memory MCP 实库仍未完成。
+- 🟡 **M4 分析、外设与 KB 运营**：管理端 analyses/peripheral 只读接口已部署；用户侧 analyses/peripheral、`/admin/kb/*`、feedback accept/ignore 仍未完成。外设事件的小智侧上报也尚未完成。
 - ⏭ **admin 下一批改造顺序**：先移除用户绑定入口并改接 E1.1 管理端资产接口 → M2 人设 → M3 历史/记忆 → M4 分析/外设/KB。
 
 ### ai-pet-app（用户端）依赖快照（2026-08-02）
@@ -196,9 +196,10 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-02 | ai-pet-backend | E1.1+E2+E4 本地实现完成、待人工 review/部署：binding_id 设备认领与 admin 禁绑；四元素/双鱼/INFP/ISFP 种子、人设读写、内部 persona_pack 七字段；对话历史分页与带时间窗的审计删除。ruff+mypy+pytest（56）通过。 |
 | 2026-08-02 | ai-pet-backend | **E1.1+E2+E4 已部署**：服务器提交 `1b356ae`，迁移至 `0005_devices_binding_id`，web-api 健康检查 200。admin 可开始 M2 人设页；app 须先改为 binding_id 绑定后可接人设与历史；xiaozhi 可接 persona_pack，仍须修复字符串 session_id、接入 devices/seen 与外设上报。 |
 | 2026-08-02 | ai-pet-admin | **B1.1 已部署**：撤除管理台调用用户 `/devices/bind` 的入口，设备认领改由用户端 `binding_id` 流程负责；生产构建通过、ECS:8080 首页探活 200。 |
-| 2026-08-02 | 跨仓契约 | **契约已变更**：新增 `GET /api/admin/devices/lookup?device_uid=`，供 admin 以设备核心 ID 精确读取当前 `binding_id` 与资产状态；仅 admin、无用户身份暴露、无归属写入，待 backend 实现。 |
+| 2026-08-02 | 跨仓契约 | **契约已实现并部署**：`GET /api/admin/devices/lookup?device_uid=` 供 admin 以设备核心 ID 精确读取当前 `binding_id` 与资产状态；仅 admin、无用户身份暴露、无归属写入。 |
 | 2026-08-02 | 跨仓权限边界 | 补正 admin M2 依赖：E2 persona 是用户拥有设备 API，app 可直接接入；admin 不可再以绑定占用用户归属，需后端另实现 admin 设备资产/人设授权接口后才能管理真实用户设备。 |
 | 2026-08-02 | ai-pet-app | 新增“用户端依赖快照”：明确 app 不以 admin 为运行时依赖；设备认领等待 backend E1.1 `binding_id` 与 admin 资产接口改造，人设/记忆/历史/外设/分析/导出依赖按端点状态列明。 |
 | 2026-08-02 | ai-pet-app | B2.1 已迁移至 backend E1.1 正式 `binding_id` 认领：移除 MAC 直绑，补齐 403/404/409/422 提示；`typecheck`、`build` 通过，已部署 ECS `:8081`，公网构建含 `binding_id`。 |
 | 2026-08-02 | ai-pet-app | C1 人设设置已接入 E2：绑定成功后以设备 ID 进入页面，读取/保存星座、MBTI、忌口、钉扎；处理未配置 404 与种子未发布 422。`typecheck`、`build` 通过，已部署 ECS `:8081`；待真实绑定码与普通用户账号完成写入验收。 |
+| 2026-08-02 | ai-pet-backend / ai-pet-admin | **管理端设备资产接口已部署**：提交 `f3fe729` + `4bf21e1` 已部署到 ECS，web-api 健康检查 200。admin 可按 MAC/SN 使用 `GET /api/admin/devices/lookup?device_uid=` 精确查询当前 `binding_id`，并可接入资产、绑定码轮换、人设、脱敏历史、外设和分析只读页面；记忆、KB 与用户侧分析/外设仍待后端实现。 |
 | 2026-08-02 | 项目看板 | 已拉取五个项目仓最新提交，并核对 ECS 容器状态；后端 E1.1/E2/E4、用户端绑定码认领、管理台 B1.1 均已上线。项目全景已同步为面向项目经理的交付、风险与下一步摘要。 |
