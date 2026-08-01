@@ -87,7 +87,7 @@
 |------|-------------|------------|----------|
 | B2.1/B2.2 设备认领、列表、详情、多设备切换 | E1.1 `binding_id` 生成/认领及用户设备列表已部署 | admin 不占用 `devices.user_id` | ✅ 已接入并部署：认领后自动设为当前设备，首页可列表、切换并持久化当前设备 |
 | B3 配网引导 | 不依赖 backend/admin 用户 API | 不依赖 admin | 依赖固件/小智的实际配网能力与图文流程 |
-| C1 人设设置、C4 首页人设摘要 | E2 人设读写、已发布的星座/MBTI 种子、`persona_pack` 实际可用并完成联调 | admin 的 KB 发布是后续运营能力，不是 app 保存人设的运行时依赖 | ✅ app C1 已接入并部署；C4 已具备设备选择前置，可继续开发 |
+| C1 人设设置、C4 首页人设摘要 | E2 人设读写、已发布的星座/MBTI 种子、`persona_pack` 实际可用并完成联调 | admin 的 KB 发布是后续运营能力，不是 app 保存人设的运行时依赖 | ✅ app C1、C4 已接入并部署；C4 按当前设备读取 persona，404 为可恢复空态 |
 | C2 记忆管理 | memories CRUD/approve/reject、Memory MCP 实库 | admin 的审核/运营页面是协作配套，不是 app 运行时依赖 | ✅ 后端用户端 memories CRUD、候选通过/驳回及 Memory MCP 实库已部署；App 尚未消费，可立即开发 |
 | C3 历史浏览 | E4 messages 查询/删除已部署 | 无运行时依赖 | ✅ app 已接入并部署；待真实用户消息数据验收 |
 | D1 外设状态、D2 日运/小记、D3 数据导出 | peripheral/analyses 用户读取已部署；日运依赖 chat events、会话结束和 worker；export 端点已存在 | admin 的分析/KB 运营页面不阻塞 app 只读展示 | ✅ D1、D2 已接入并部署；后端已有真实 `daily_summary` 产出，待用户端实际账号验收；⛔ D3 `/export` 仍为 501，不可开发真实导出 |
@@ -99,7 +99,7 @@
 |---|---|---|
 | P4 记忆列表、搜索、新建、归档、候选审核 | ✅ memories CRUD + approve/reject + Memory MCP 实库已部署 | App 本轮直接开发 C2 |
 | P6 日运/小记 | ✅ `GET /devices/{id}/analyses` 与 `daily_summary` worker 已部署，并已有首条真实产出 | App 本轮直接开发 D2；无结果时保持等待生成空态 |
-| P1 人设摘要 | ✅ persona GET 已部署 | C4 可后续开发 |
+| P1 人设摘要 | ✅ persona GET 已部署 | ✅ C4 已接入：当前设备星座、MBTI、知识库版本和跟随策略 |
 | P2 配网图文引导 | 不依赖用户 API，取决于固件配网说明 | B3 待产品/固件提供最终步骤与素材 |
 | P8 数据导出 | ⛔ `POST /devices/{id}/export` 当前返回 501 | D3 继续阻塞，需 backend 实现下载响应与格式契约 |
 | 人设问卷 | ⛔ `POST /devices/{id}/persona/questionnaire` 当前为 501 | 保持现有星座/MBTI 四维表单，不接问卷端点 |
@@ -281,3 +281,4 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-02 | 项目看板 | **Admin/App 开发前置已更新**：角色档案 `dossier`、用户/管理端 memories 审核、LLM 每日摘要与人设成长分析均有已部署接口；Admin 可立即开发档案编辑器、记忆审核页、KB 运营页与分析卡片，App 可立即开发“我的星仔”、记忆页、今日小记/成长建议与外设状态页。 |
 | 2026-08-02 | ai-pet-backend | 本仓 `docs/09-部署进度与运维.md` 与 `docs/10-后端开发计划.md` 已同步（提交 `d2eb8c5`）：记录 LLM 成长链、记忆实库、角色档案上线事实，并将后续重点调整为记忆画像、人设问卷/预览、KB draft 闭环与运营监控。 |
 | 2026-08-02 | ai-pet-app | **原型核对后完成 C2 + D2 并部署**：记忆页接入用户端 memories 列表/搜索、手动新建、归档删除与 candidate 通过/忽略；日运/小记页接入 `daily_summary` analyses，兼容无结果等待态。`typecheck`、`build` 通过，ECS `:8081` 首页 200；未登录 memories/analyses 均预期 401。D3 导出与人设问卷仍因后端 501 阻塞。 |
+| 2026-08-02 | ai-pet-app | **C4 首页“我的星仔”已完成**：对当前选中设备读取 persona，展示星座、MBTI、知识库版本与跟随策略；切换设备重新请求，404 为“未设置人设”空态并保留设置入口。原型核对与后续计划已回写 app 文档；`typecheck`、`build` 通过，待真实账号设备完成受保护接口验收。 |
