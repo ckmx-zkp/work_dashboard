@@ -279,4 +279,5 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-02 | ai-pet-backend | **LLM 成长链已部署并首验收通过**：提交 `18f09e2` + `14c62c4`；千帆 OpenAI 兼容服务以 `qianfan-code-latest` 配置到服务器私有 `.env`（密钥不入仓/看板），真实脱敏会话的 `daily_summary` 返回 200 并完成，已写入 1 条每日摘要与 1 条人设成长建议。该会话无长期记忆候选；Worker 超时调为 90 秒。 |
 | 2026-08-02 | ai-pet-backend | **稳定角色档案已部署**：提交 `7659734`，迁移 `0007_persona_dossier` 已执行；`GET/PUT persona` 及 Admin 对应写入新增 `dossier`（身份、背景、角色、目标、进化规则、关系），其内容在下次会话编译进固定 7 字段 `persona_pack` 的提示片段。视觉与档案内容 AI 生成需求见 backend `prompt生成需求.md`（提交 `cc9affc`）。 |
 | 2026-08-02 | 项目看板 | **Admin/App 开发前置已更新**：角色档案 `dossier`、用户/管理端 memories 审核、LLM 每日摘要与人设成长分析均有已部署接口；Admin 可立即开发档案编辑器、记忆审核页、KB 运营页与分析卡片，App 可立即开发“我的星仔”、记忆页、今日小记/成长建议与外设状态页。 |
+| 2026-08-02 | ai-pet-backend | 本仓 `docs/09-部署进度与运维.md` 与 `docs/10-后端开发计划.md` 已同步（提交 `d2eb8c5`）：记录 LLM 成长链、记忆实库、角色档案上线事实，并将后续重点调整为记忆画像、人设问卷/预览、KB draft 闭环与运营监控。 |
 | 2026-08-02 | ai-pet-app | **原型核对后完成 C2 + D2 并部署**：记忆页接入用户端 memories 列表/搜索、手动新建、归档删除与 candidate 通过/忽略；日运/小记页接入 `daily_summary` analyses，兼容无结果等待态。`typecheck`、`build` 通过，ECS `:8081` 首页 200；未登录 memories/analyses 均预期 401。D3 导出与人设问卷仍因后端 501 阻塞。 |
