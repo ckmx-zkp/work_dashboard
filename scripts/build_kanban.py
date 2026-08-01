@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import datetime
 import html
+import re
 from pathlib import Path
 
 import markdown
@@ -59,8 +60,9 @@ main { max-width:1180px; margin:0 auto; padding:30px 24px 56px; }
 .priority { margin:0; padding:0; list-style:none; counter-reset:item; }.priority li { counter-increment:item; display:grid; grid-template-columns:27px 1fr; gap:8px; padding:11px 0; border-top:1px solid var(--line); font-size:14px; }.priority li:first-child { border-top:0; padding-top:0; }.priority li::before { content:counter(item); color:var(--blue); font-weight:700; }
 .risk { margin:0; padding:0; list-style:none; }.risk li { border-top:1px solid var(--line); padding:11px 0; font-size:14px; }.risk li:first-child { border-top:0; padding-top:0; }.risk strong { display:block; margin-bottom:2px; font-size:13px; color:var(--amber); }
 .deployment { margin-top:20px; display:flex; flex-wrap:wrap; gap:10px 24px; padding:15px 18px; background:#edf3f9; color:#38506b; font-size:13px; }.deployment strong { color:var(--ink); }
+.diagram { margin:18px 0 28px; padding:22px; border:1px solid var(--line); background:#fff; overflow-x:auto; }.diagram .mermaid { min-width:620px; text-align:center; }
 h1 { font-size:25px; padding-bottom:12px; border-bottom:2px solid var(--line); } h2 { font-size:20px; margin-top:32px; padding-bottom:7px; border-bottom:1px solid var(--line); } h3 { font-size:16px; margin-top:24px; } code { background:#eff3f7; padding:2px 5px; border-radius:3px; font-size:13px; } pre { background:#172b4d; color:#eff6ff; padding:14px; overflow:auto; } pre code { background:none; } table { border-collapse:collapse; display:block; overflow-x:auto; width:100%; font-size:13px; margin:14px 0; } th,td { padding:8px 10px; text-align:left; vertical-align:top; border:1px solid var(--line); white-space:nowrap; } td:last-child,td:nth-last-child(2) { white-space:normal; } th { background:#f1f5f9; } blockquote { margin:14px 0; padding:8px 14px; border-left:3px solid var(--blue); background:var(--blue-soft); color:#42546b; } a { color:var(--blue); }
-@media(max-width:720px){ header { padding:18px 18px; } main { padding:22px 16px 40px; }.pm-lead { display:block; }.health { display:inline-block; margin-top:15px; }.workstreams,.two-column { grid-template-columns:1fr; }.stream,.stream:nth-child(2n),.stream:nth-last-child(-n+2) { border-right:0; border-bottom:1px solid var(--line); }.stream:last-child { border-bottom:0; }.page.technical { padding:20px 16px; } nav { padding:0 16px; gap:18px; } }
+@media(max-width:720px){ header { padding:18px 18px; } main { padding:22px 16px 40px; }.pm-lead { display:block; }.health { display:inline-block; margin-top:15px; }.workstreams,.two-column { grid-template-columns:1fr; }.stream,.stream:nth-child(2n),.stream:nth-last-child(-n+2) { border-right:0; border-bottom:1px solid var(--line); }.stream:last-child { border-bottom:0; }.page.technical { padding:20px 16px; } nav { padding:0 16px; gap:18px; }.diagram { padding:14px; }.diagram .mermaid { min-width:560px; } }
 """
 
 JS = """
@@ -94,7 +96,13 @@ def management_overview() -> str:
 
 def render_page(md_path: Path) -> str:
     text = md_path.read_text(encoding="utf-8")
-    return markdown.markdown(text, extensions=MD_EXTS, output_format="html")
+    rendered = markdown.markdown(text, extensions=MD_EXTS, output_format="html")
+    return re.sub(
+        r'<pre><code class="language-mermaid">(.*?)</code></pre>',
+        lambda match: f'<div class="diagram"><div class="mermaid">{html.unescape(match.group(1))}</div></div>',
+        rendered,
+        flags=re.DOTALL,
+    )
 
 
 def main() -> None:
@@ -130,7 +138,13 @@ def main() -> None:
 </header>
 <nav>{tabs}</nav>
 <main>{sections}</main>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 <script>{JS}</script>
+<script>
+if (window.mermaid) {{
+  mermaid.initialize({{ startOnLoad: true, securityLevel: 'strict', theme: 'base', themeVariables: {{ primaryColor: '#eaf2fb', primaryTextColor: '#16243a', primaryBorderColor: '#2563a9', lineColor: '#66758a', fontFamily: 'Microsoft YaHei, Segoe UI, sans-serif' }} }});
+}}
+</script>
 </body>
 </html>
 """
