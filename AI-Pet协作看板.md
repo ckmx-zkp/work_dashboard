@@ -196,6 +196,7 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-02 | ai-pet-backend | E1.1+E2+E4 本地实现完成、待人工 review/部署：binding_id 设备认领与 admin 禁绑；四元素/双鱼/INFP/ISFP 种子、人设读写、内部 persona_pack 七字段；对话历史分页与带时间窗的审计删除。ruff+mypy+pytest（56）通过。 |
 | 2026-08-02 | ai-pet-backend | **E1.1+E2+E4 已部署**：服务器提交 `1b356ae`，迁移至 `0005_devices_binding_id`，web-api 健康检查 200。admin 可开始 M2 人设页；app 须先改为 binding_id 绑定后可接人设与历史；xiaozhi 可接 persona_pack，仍须修复字符串 session_id、接入 devices/seen 与外设上报。 |
 | 2026-08-02 | ai-pet-admin | **B1.1 已部署**：撤除管理台调用用户 `/devices/bind` 的入口，设备认领改由用户端 `binding_id` 流程负责；生产构建通过、ECS:8080 首页探活 200。 |
+| 2026-08-02 | 跨仓契约 | **契约已变更**：新增 `GET /api/admin/devices/lookup?device_uid=`，供 admin 以设备核心 ID 精确读取当前 `binding_id` 与资产状态；仅 admin、无用户身份暴露、无归属写入，待 backend 实现。 |
 | 2026-08-02 | 跨仓权限边界 | 补正 admin M2 依赖：E2 persona 是用户拥有设备 API，app 可直接接入；admin 不可再以绑定占用用户归属，需后端另实现 admin 设备资产/人设授权接口后才能管理真实用户设备。 |
 | 2026-08-02 | ai-pet-app | 新增“用户端依赖快照”：明确 app 不以 admin 为运行时依赖；设备认领等待 backend E1.1 `binding_id` 与 admin 资产接口改造，人设/记忆/历史/外设/分析/导出依赖按端点状态列明。 |
 | 2026-08-02 | ai-pet-app | B2.1 已迁移至 backend E1.1 正式 `binding_id` 认领：移除 MAC 直绑，补齐 403/404/409/422 提示；`typecheck`、`build` 通过，已部署 ECS `:8081`，公网构建含 `binding_id`。 |
