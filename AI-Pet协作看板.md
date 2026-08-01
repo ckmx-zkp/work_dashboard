@@ -142,6 +142,8 @@
 1. **知识库运营前端**：直接接已部署的 `/api/admin/kb/zodiac`、`/mbti`、发布和反馈审核端点；支持草稿编辑、审核后发布、版本与状态筛选。
 2. **现有设备运营体验**：围绕资产、绑定码、人设、脱敏历史、外设、分析增加筛选、空态、任务状态展示与验收提示，不需要等待小智新接口。
 3. **记忆管理前端**：直接接已部署的用户/管理端 memories 列表、编辑、归档、candidate 通过/驳回接口；候选数据将在 LLM worker 配置后出现。
+4. **角色档案编辑器（新增、可立即开发）**：在现有人设页接入 `dossier` 的身份、背景、角色、目标、进化规则、关系六字段；保存走既有 Admin `PUT /api/admin/devices/{id}/persona`，并提示“下一次会话生效”。
+5. **分析卡片化（新增、可立即开发）**：把 `daily_summary` 的摘要/主题/情绪/跟进建议，以及 `persona_growth` 的建议、证据、置信度渲染为卡片；禁止直接展示原始 JSON。
 
 ### 已实现、可由 app 继续开发
 
@@ -149,6 +151,8 @@
 2. **分析与日运页**：先接 `GET /api/devices/{id}/analyses` 和导出接口，展示“暂无数据/等待夜间总结”；等 worker 有产出后无需重做接口层。
 3. **人设初始化体验**：在现有 GET/PUT 人设基础上补完整 12 星座、16 MBTI、愿望→`overrides` 映射、跳过默认值及“下次会话生效”的提示。
 4. **记忆页可直接开发**：接已有 memories CRUD/审核接口；LLM 未配置期间仅显示手工记忆或空态。
+5. **我的星仔（新增、可立即开发）**：复用用户 `GET/PUT /api/devices/{id}/persona` 的 `dossier` 字段，展示可读角色档案；用户可编辑“关系”和互动偏好，基础身份/背景可在首版先只读。
+6. **今日小记与成长建议（新增、可立即开发）**：接 `GET /api/devices/{id}/analyses?kind=daily_summary` 与 `kind=persona_growth`，以卡片展示，建议应用时调用 `POST /api/devices/{id}/analyses/{aid}/apply-persona-growth`。
 
 ## 开发优先级（2026-08-01 会话 B 提议，待会话 A 确认）
 
@@ -274,4 +278,5 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-02 | 项目看板 | **当前协作建议已校正**：小智 V0.2 的 persona_pack、聊天旁路、会话结束、首见设备和外设旁路代码均已部署，下一步为真机 E2E 落库验收；admin 可直接开发 KB 运营前端，app 可直接开发外设/分析展示与人设初始化；记忆页等待 backend memories/MCP 实库。 |
 | 2026-08-02 | ai-pet-backend | **LLM 成长链已部署并首验收通过**：提交 `18f09e2` + `14c62c4`；千帆 OpenAI 兼容服务以 `qianfan-code-latest` 配置到服务器私有 `.env`（密钥不入仓/看板），真实脱敏会话的 `daily_summary` 返回 200 并完成，已写入 1 条每日摘要与 1 条人设成长建议。该会话无长期记忆候选；Worker 超时调为 90 秒。 |
 | 2026-08-02 | ai-pet-backend | **稳定角色档案已部署**：提交 `7659734`，迁移 `0007_persona_dossier` 已执行；`GET/PUT persona` 及 Admin 对应写入新增 `dossier`（身份、背景、角色、目标、进化规则、关系），其内容在下次会话编译进固定 7 字段 `persona_pack` 的提示片段。视觉与档案内容 AI 生成需求见 backend `prompt生成需求.md`（提交 `cc9affc`）。 |
+| 2026-08-02 | 项目看板 | **Admin/App 开发前置已更新**：角色档案 `dossier`、用户/管理端 memories 审核、LLM 每日摘要与人设成长分析均有已部署接口；Admin 可立即开发档案编辑器、记忆审核页、KB 运营页与分析卡片，App 可立即开发“我的星仔”、记忆页、今日小记/成长建议与外设状态页。 |
 | 2026-08-02 | ai-pet-app | **原型核对后完成 C2 + D2 并部署**：记忆页接入用户端 memories 列表/搜索、手动新建、归档删除与 candidate 通过/忽略；日运/小记页接入 `daily_summary` analyses，兼容无结果等待态。`typecheck`、`build` 通过，ECS `:8081` 首页 200；未登录 memories/analyses 均预期 401。D3 导出与人设问卷仍因后端 501 阻塞。 |
