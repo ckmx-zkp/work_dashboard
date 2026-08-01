@@ -88,10 +88,21 @@
 | B2.1/B2.2 设备认领、列表、详情、多设备切换 | E1.1 `binding_id` 生成/认领及用户设备列表已部署 | admin 不占用 `devices.user_id` | ✅ 已接入并部署：认领后自动设为当前设备，首页可列表、切换并持久化当前设备 |
 | B3 配网引导 | 不依赖 backend/admin 用户 API | 不依赖 admin | 依赖固件/小智的实际配网能力与图文流程 |
 | C1 人设设置、C4 首页人设摘要 | E2 人设读写、已发布的星座/MBTI 种子、`persona_pack` 实际可用并完成联调 | admin 的 KB 发布是后续运营能力，不是 app 保存人设的运行时依赖 | ✅ app C1 已接入并部署；C4 已具备设备选择前置，可继续开发 |
-| C2 记忆管理 | memories CRUD/approve/reject、Memory MCP 实库 | admin 的审核/运营页面是协作配套，不是 app 运行时依赖 | backend 当前仍为 501 骨架，**阻塞** |
+| C2 记忆管理 | memories CRUD/approve/reject、Memory MCP 实库 | admin 的审核/运营页面是协作配套，不是 app 运行时依赖 | ✅ 后端用户端 memories CRUD、候选通过/驳回及 Memory MCP 实库已部署；App 尚未消费，可立即开发 |
 | C3 历史浏览 | E4 messages 查询/删除已部署 | 无运行时依赖 | ✅ app 已接入并部署；待真实用户消息数据验收 |
-| D1 外设状态、D2 日运/小记、D3 数据导出 | peripheral/analyses 用户读取已部署；日运依赖 chat events、会话结束和 worker；export 端点已存在 | admin 的分析/KB 运营页面不阻塞 app 只读展示 | ✅ D1 已接入并部署：当前设备的外设快照、无上报空态与刷新；D2/D3 尚未消费，分析与日运暂无 worker 产出数据 |
+| D1 外设状态、D2 日运/小记、D3 数据导出 | peripheral/analyses 用户读取已部署；日运依赖 chat events、会话结束和 worker；export 端点已存在 | admin 的分析/KB 运营页面不阻塞 app 只读展示 | ✅ D1 已接入并部署；🟡 D2 可消费 `daily_summary`，后端 worker/LLM 链已部署但生产 LLM 配置与真实会话产出待验收；⛔ D3 `/export` 仍为 501，不可开发真实导出 |
 | F1/F2 发布与安装 | 无业务 API 新前置；需完成端到端验收 | 无 | 还需域名与 HTTPS；当前 8081 HTTP 仅适合内测 |
+
+### 原型核对（2026-08-02）
+
+| 原型/用户端任务 | 后端接口状态 | 处理结论 |
+|---|---|---|
+| P4 记忆列表、搜索、新建、归档、候选审核 | ✅ memories CRUD + approve/reject + Memory MCP 实库已部署 | App 本轮直接开发 C2 |
+| P6 日运/小记 | ✅ `GET /devices/{id}/analyses` 与 `daily_summary` worker 已部署 | App 本轮直接开发 D2；无结果时保持等待生成空态 |
+| P1 人设摘要 | ✅ persona GET 已部署 | C4 可后续开发 |
+| P2 配网图文引导 | 不依赖用户 API，取决于固件配网说明 | B3 待产品/固件提供最终步骤与素材 |
+| P8 数据导出 | ⛔ `POST /devices/{id}/export` 当前返回 501 | D3 继续阻塞，需 backend 实现下载响应与格式契约 |
+| 人设问卷 | ⛔ `POST /devices/{id}/persona/questionnaire` 当前为 501 | 保持现有星座/MBTI 四维表单，不接问卷端点 |
 
 ### xiaozhi-server（会话 B 维护）
 - ✅ 上游 v0.9.6 源码钉版并首推 GitHub（ckmx-zkp/aipet-xiaozhi-server-）
@@ -242,4 +253,4 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-02 | ai-pet-app | C3 历史已接入 E4：按当前设备分页读取脱敏消息、按本地日期分组、按天确认删除（带 ISO 时间窗）；`typecheck`、`build` 通过，已部署 ECS `:8081`。 |
 | 2026-08-02 | ai-pet-app | **D1 外设状态已接入并部署**：调用用户端 `GET /devices/{id}/peripheral`，展示眼睛表情、视线、闭眼、可读扩展字段与更新时间；无设备及 404 无快照均为可恢复空态，支持手动刷新。同步更新人设全量种子提示；`typecheck`、`build` 通过，ECS `:8081` 首页 200、未登录外设接口预期 401。 |
 | 2026-08-02 | 项目看板 | **当前协作建议已校正**：小智 V0.2 的 persona_pack、聊天旁路、会话结束、首见设备和外设旁路代码均已部署，下一步为真机 E2E 落库验收；admin 可直接开发 KB 运营前端，app 可直接开发外设/分析展示与人设初始化；记忆页等待 backend memories/MCP 实库。 |
-| 2026-08-02 | ai-pet-backend | **LLM 成长链已部署**：提交 `18f09e2` + `14c62c4`；`daily_summary` worker 调用可配置 OpenAI 兼容接口，产出每日摘要、主题/情绪/跟进建议、LLM 审核记忆和人设成长建议；用户/管理端 memories 审核、Memory MCP 实库、应用私有人设建议接口已上线。未配置 LLM 时任务延后重试且不消耗次数，待填 `LLM_BASE_URL`、`LLM_API_KEY`、`LLM_MODEL` 后验收。 |
+| 2026-08-02 | ai-pet-backend | **LLM 成长链已部署并首验收通过**：提交 `18f09e2` + `14c62c4`；千帆 OpenAI 兼容服务以 `qianfan-code-latest` 配置到服务器私有 `.env`（密钥不入仓/看板），真实脱敏会话的 `daily_summary` 返回 200 并完成，已写入 1 条每日摘要与 1 条人设成长建议。该会话无长期记忆候选；Worker 超时调为 90 秒。 |
