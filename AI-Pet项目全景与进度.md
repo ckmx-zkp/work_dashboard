@@ -38,15 +38,10 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    subgraph delivered["已上线"]
-        BE["后端：设备 / 人设 / 历史 / 资产"]
-        APP["用户端：登录 / 绑定 / 设备切换 / 人设"]
-        ADMIN["管理台：资产 / 人设 / 历史 / 外设"]
-        VOICE["设备语音：人设刷新 / 眼睛回传"]
-    end
-    VOICE --> CHECK{"真实设备验收"}
-    BE --> CHECK
-    APP --> CHECK
+    BE["后端：设备 / 人设 / 历史 / 资产"] --> CHECK["真实设备验收"]
+    APP["用户端：登录 / 绑定 / 设备切换 / 人设"] --> CHECK
+    ADMIN["管理台：资产 / 人设 / 历史 / 外设"] --> CHECK
+    VOICE["设备语音：人设刷新 / 眼睛回传"] --> CHECK
     CHECK -->|"通过"| PILOT["连续内测体验"]
     PILOT --> RELEASE["域名 + HTTPS 后正式发布"]
 ```
