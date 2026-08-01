@@ -87,8 +87,9 @@
 |------|-------------|------------|----------|
 | B2.1/B2.2 设备认领、列表、详情、多设备切换 | E1.1 `binding_id` 生成/认领及用户设备列表已部署 | admin 停止调用用户 `/devices/bind`；后续改接管理端设备资产查看/诊断接口，不能写 `devices.user_id` | ✅ app B2.1 已迁移并部署；B2.2 列表/详情与多设备切换待开发 |
 | B3 配网引导 | 不依赖 backend/admin 用户 API | 不依赖 admin | 依赖固件/小智的实际配网能力与图文流程 |
-| C1 人设设置、C4 首页人设摘要 | E2 人设读写、已发布的星座/MBTI 种子、`persona_pack` 实际可用并完成联调 | admin 的 KB 发布是后续运营能力，不是 app 保存人设的运行时依赖 | ✅ app C1 已接入并部署；C4 首页摘要待 B2.2 设备列表/当前设备选择 |
-| C2 记忆管理、C3 历史浏览 | memories CRUD/approve/reject、messages 查询/删除、Memory MCP 实库 | admin 的审核/运营页面是协作配套，不是 app 运行时依赖 | backend 当前仍为 501 骨架，**阻塞** |
+| C1 人设设置、C4 首页人设摘要 | E2 人设读写、已发布的星座/MBTI 种子、`persona_pack` 实际可用并完成联调 | admin 的 KB 发布是后续运营能力，不是 app 保存人设的运行时依赖 | ✅ app C1 已接入并部署；C4 已具备设备选择前置，可继续开发 |
+| C2 记忆管理 | memories CRUD/approve/reject、Memory MCP 实库 | admin 的审核/运营页面是协作配套，不是 app 运行时依赖 | backend 当前仍为 501 骨架，**阻塞** |
+| C3 历史浏览 | E4 messages 查询/删除已部署 | 无运行时依赖 | ✅ app 已接入并部署；待真实用户消息数据验收 |
 | D1 外设状态、D2 日运/小记、D3 数据导出 | peripheral/analyses/export 用户 API；日运还依赖 chat events、会话结束和 worker 链路 | admin 的分析/KB 运营页面不阻塞 app 只读展示 | backend 端点仍未完成，且小智旁路联调未通，**阻塞** |
 | F1/F2 发布与安装 | 无业务 API 新前置；需完成端到端验收 | 无 | 还需域名与 HTTPS；当前 8081 HTTP 仅适合内测 |
 
@@ -215,3 +216,4 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-02 | ai-pet-backend | **KB v2 已审核发布**：提交 `9b5d2e6` 上线 `/admin/kb/*` 的星座/MBTI 草稿、发布与反馈审核能力；v2 文件导入后完成 AI 审核，12 条星座 + 16 条 MBTI 从 draft 发布为 v2，补齐运行时 `default_emotion` 并写入 28 条审计。`follow_latest=true` 设备下次拉取 persona_pack 自动采用 v2。 |
 | 2026-08-02 | 项目看板 | 已拉取五个项目仓最新提交，并核对 ECS 容器状态；后端 E1.1/E2/E4、用户端绑定码认领、管理台 B1.1 均已上线。项目全景已同步为面向项目经理的交付、风险与下一步摘要。 |
 | 2026-08-02 | ai-pet-app | B2.2 已接入并部署：首页 `GET /devices` 展示设备摘要、切换并持久化当前设备；绑定成功自动设为当前设备，人设页可复用该设备 ID。`typecheck`、`build` 通过，ECS `:8081` 公网首页 200。 |
+| 2026-08-02 | ai-pet-app | C3 历史已接入 E4：按当前设备分页读取脱敏消息、按本地日期分组、按天确认删除（带 ISO 时间窗）；`typecheck`、`build` 通过，已部署 ECS `:8081`。 |
