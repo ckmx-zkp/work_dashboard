@@ -108,9 +108,10 @@
 - ✅ 上游 v0.9.6 源码钉版并首推 GitHub（ckmx-zkp/aipet-xiaozhi-server-）
 - ✅ 全模块部署到 39.107.143.71 `/opt/xiaozhi-server`（4 容器正常；安全组+ufw 已放 8000/8002/8003；MySQL 弱密码已换）
 - ✅ 修复三处部署坑：OTA 下发占位域名（`server.fronted_url`/`server.ota`/`server.websocket` 已指向公网地址）、`server.auth_key` 与 `server.secret` 不一致（真机连不上的隐患）
-- ✅ 模型链路：LLM=千帆 `qianfan-code-latest`（主用；GLM-4.5-Flash/Kimi K2.7 保留备用）；ASR=豆包流式 2.0（试用 20h）；TTS=火山双向流式·湾湾小何（`zh_female_wanwanxiaohe_moon_bigtts`）
+- ✅ 模型链路：LLM=MiniMax-M2.5（智能体“测试1”主用；千帆 `qianfan-code-latest`/GLM-4.5-Flash/Kimi K2.7 保留备用）；ASR=豆包流式 2.0（试用 20h）；TTS=火山双向流式·湾湾小何（`zh_female_wanwanxiaohe_moon_bigtts`）
 - ✅ 真机 `8c:fd:49:0c:a8:78` 激活绑定+首轮对话联通（唤醒→ASR→GLM 人设→TTS→眼睛 emotion 联动）；固件联调看板：`AI-Pet固件联调看板.md`（本目录）
 - 🟡 V0.2 业务集成：内网与内部鉴权已联通；`v0.9.6-b4` 已实现 persona_pack 定时刷新/缓存/onboarding、眼睛 MCP 外设状态旁路，`v0.9.6-b2` 已改为 MAC + 原生字符串 UUID 的 devices/seen、chat events、session end。四项均待真机 E2E 落库证据；Memory MCP 暂缓，待 backend 定传输。
+- ✅ **C5 + MiniMax 思考隔离已上线（2026-08-16）**：构建并切换 `xiaozhi-aipet-server:v0.9.6-b8`（线上由 b6 直跳 b8，b7 废弃）。内容：跨 chunk `<think>` 状态机过滤（`ThinkTagFilter`，本地提交 `e93bb14`）、MiniMax `thinking:{type:disabled}` 双保险、direct_answer 兜底剥离；并补齐服务器源码树 `connection.py` 此前缺失的 dynamic_context 合入块（否则 b7 即使上线 C5 也不会进 Prompt）。容器级验收通过：容器启动正常、容器内过滤器行为测试通过、容器内直连 C5 `GET /api/internal/context/device` 200/7ms/真机 3 条上下文；主机级复核：已认领真机 data 非空、未知设备空、无 token 401。仅剩真机验收。
 
 ## 当前协作建议（2026-08-02，覆盖下方历史优先级）
 
@@ -119,13 +120,13 @@
 1. **真机 E2E 验收（最高优先）**：用真实设备依次证明 `devices/seen` 生成/更新资产、修改人设后 `persona_pack` 被拉取并改变下一会话 Prompt/默认表情、每轮 user/assistant 事件落入 backend、断开会话触发 `daily_summary` 入队、一次眼睛动作写入外设快照。
 2. **失败可观测性**：为上述旁路请求输出不含对话原文的状态码、重试次数、`device_uid`、`session_id` 日志/指标；确认 4xx 丢弃、5xx 有界重试且绝不阻塞语音/TTS。
 3. **Memory MCP 挂载暂不开发**：等待 backend 先实现 memories 实库并将 stdio 改为双方确认的 HTTP MCP 契约；届时按超时降级为“无记忆会话”。
-4. **Context Provider 合并与真机验收（C5 后端已完成，整体未完成，见下）**：小智上游会在唤醒/构建 Prompt 时以 `device-id` 请求上下文源并替换 `{{ dynamic_context }}`。本仓现在应把固定基础行为 + backend persona_pack + 上游动态上下文合并为同一最终 Prompt；不得把完整 KB 或原始对话注入 Prompt。
+4. **Context Provider 合并与真机验收（backend 与小智侧代码/部署均已完成，仅剩真机验收，见下）**：小智上游会在唤醒/构建 Prompt 时以 `device-id` 请求上下文源并替换 `{{ dynamic_context }}`。本仓已把固定基础行为 + backend persona_pack + 上游动态上下文合并为同一最终 Prompt（随 `v0.9.6-b8` 上线）；不得把完整 KB 或原始对话注入 Prompt。
 
 ### ai-pet-backend：C5 Context Provider（已部署，2026-08-02）
 
 **部署状态**：backend 提交 `85c05be` 已上线 `GET /api/internal/context/device`，真实设备带内部鉴权请求返回 HTTP 200。响应采用上游要求的 `{"code":0,"data":[...]}` 包装；未知/未认领/无数据空成功降级。
 
-**当前结论**：C5 后端能力已完成并部署；C5 端到端尚未完成，阻塞在小智服务配置、最终 Prompt 合并与真机验收。
+**当前结论**：C5 后端能力已完成并部署；小智侧已于 2026-08-16 随 `v0.9.6-b8` 完成私有配置、最终 Prompt 单次合并（并补齐 dynamic_context 合入块）与容器级验收；C5 端到端**仅剩真机验收**：唤醒不播报 think、首轮响应体现上下文、backend 宕机时 0.5s 降级且不阻塞首轮语音。
 
 **小智下一步（按顺序执行）**：
 
@@ -291,3 +292,4 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-15 | ai-pet-backend / xiaozhi-server | **C5 状态复核**：backend 提交 `85c05be` 的 `GET /api/internal/context/device` 已部署，内部鉴权真实设备请求 200；当前仅完成后端。小智服务须按看板配置私有 URL/token，按 `pet_default → persona_pack → dynamic_context` 单次合并最终 Prompt，并完成真机唤醒、日志及首轮语音验收；异常时仅降级动态上下文，不影响既有人设链路。 |
 | 2026-08-02 | ai-pet-app | **原型核对后完成 C2 + D2 并部署**：记忆页接入用户端 memories 列表/搜索、手动新建、归档删除与 candidate 通过/忽略；日运/小记页接入 `daily_summary` analyses，兼容无结果等待态。`typecheck`、`build` 通过，ECS `:8081` 首页 200；未登录 memories/analyses 均预期 401。D3 导出与人设问卷仍因后端 501 阻塞。 |
 | 2026-08-02 | ai-pet-app | **C4 首页“我的星仔”已完成**：对当前选中设备读取 persona，展示星座、MBTI、知识库版本与跟随策略；切换设备重新请求，404 为“未设置人设”空态并保留设置入口。原型核对与后续计划已回写 app 文档；`typecheck`、`build` 通过，待真实账号设备完成受保护接口验收。 |
+| 2026-08-16 | xiaozhi-server | **C5 + MiniMax 思考隔离上线**：构建并切换 `xiaozhi-aipet-server:v0.9.6-b8`（b6 直跳 b8，b7 废弃）；`ThinkTagFilter` 跨 chunk 过滤（本地提交 `e93bb14`）+ `thinking:{type:disabled}` + direct_answer 兜底剥离，并补齐 `connection.py` 缺失的 dynamic_context 合入块；容器级验收通过（过滤器行为测试、直连 C5 200/7ms/真机 3 条、主机级 401/空降级复核）；智能体“测试1”主 LLM 切为 MiniMax-M2.5；仅剩真机验收。 |
