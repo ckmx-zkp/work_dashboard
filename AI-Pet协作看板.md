@@ -116,6 +116,48 @@
 - ✅ **失败可观测性已上线（2026-08-16）**：构建并切换 `xiaozhi-aipet-server:v0.9.6-b9`（b8 基础上叠加）。新增 `core/utils/integration_log.py` 统一旁路日志（tag=BIZ）：persona_pack、chat events、session end、peripheral events、C5 context provider 均记录 `device_uid`、`session_id`、耗时、outcome（ok/retry/dropped/degraded）与降级原因；重试中间过程仅 debug 不刷屏；不记录对话正文、token、完整 Prompt；接口通用，后续 Memory MCP 直接复用。本地提交 `2ef6d07`（含另一会话并入的契约定稿 docs 提交 `e5d5de9`）。容器级验证通过：b9 启动无错误、容器内 `log_op` 自测输出正确单行。真机日志证据随 E2E 验收一起取。
 - 🟡 **Memory MCP 挂载实施中（2026-08-16 开工）**：服务器网络已核实——`memory-mcp` 容器在 `ai-pet-backend_default` 网络（别名 `memory-mcp`，8000/tcp，未映射公网），小智 server 容器在 `xiaozhi-server_default` 网络；下一步将小智 server 容器接入共享网络后按交接清单配置私有 URL/token 并挂载三工具。
 
+## 任务拆分（2026-08-16 · 原型第五次校准）
+
+> 来源：prototype 仓《需求分析与下一步原型方案-2026-08.md》第五次校准（经五仓代码核实），配套原型 `e2e-checklist.html`（真机验收墙）与 `my-pet.html`（我的星仔）。总体顺序：真机 E2E 验收 > 接口已就绪的前端消费 > backend 新 Epic（E6.1 → E2.1 → E7.1 → E8）。
+
+### ai-pet-app（用户端前端）
+
+| # | 任务 | 依赖 / 说明 | 状态 |
+|---|------|-------------|------|
+| A1 | "我的星仔"角色档案页（原型 `my-pet.html` 已出稿）：dossier 六字段用户可读版，关系 + 陪伴偏好可编辑，身份/背景/角色/目标/进化规则只读；保存提示"下次实体对话生效" | GET/PUT persona dossier 已上线；**开工前待产品拍板字段可见边界（见待决事项）** | 待开发 |
+| A2 | 成长建议卡：`kind=persona_growth` 建议/证据/置信度卡片 + `apply-persona-growth` 二次确认 | 接口已上线 | 待开发 |
+| A3 | 人设生效第四态"已验证生效"（P3 三态扩展） | 无新接口；与验收墙状态联动 | 待开发 |
+| A4 | B3 配网引导页 | 等固件最终配网步骤与素材 | 阻塞 |
+| A5 | 日运页真实数据验收：worker 修复后已重跑产出 8 条 `daily_summary`，App 刷新即可验证 | 2026-08-16 已具备条件 | 待验收 |
+| A6 | 文档债顺手回写：docs/06 的 D4 勾选、`PersonaView` 种子注释、docs/03 P2 的 binding_id 契约 | 无 | 顺手 |
+
+### ai-pet-admin（管理台前端）
+
+| # | 任务 | 依赖 / 说明 | 状态 |
+|---|------|-------------|------|
+| D1 | 分析卡片化：`daily_summary` 摘要/主题/情绪/跟进建议与 `persona_growth` 建议/证据/置信度渲染为卡片，禁止直接展示原始 JSON（现为 `<pre>`） | 接口已上线 | 待开发 |
+| D2 | 设备资产列表真分页（现 `limit=100` 一次拉取，无分页控件） | 无 | 待开发 |
+| D3 | 空态/加载/错误统一规范 | 无 | 待开发 |
+| D4 | 仓内文档债：docs/02/03/04/06 回写已完成事实（停在 08-02 早晨） | 无 | 顺手 |
+
+### ai-pet-backend（业务后端）
+
+| # | 任务 | 说明 | 状态 |
+|---|------|------|------|
+| B1 | E6.1 记忆画像：记忆变更入队 → LLM 产出 `memory_profile` 卡片 | app 画像页前置 | 待排期 |
+| B2 | E2.1 人设问卷 + `persona/preview` 编译预览（MBTI 算型在 backend，dry-run 不改库） | app/admin 预览前置 | 待排期 |
+| B3 | E7.1 KB 反馈候选 → 草稿闭环 | 运营闭环 | 待排期 |
+| B4 | E8：异步 export、数据保留清理（90/180 天）、运营监控与 LLM 成本/失败指标 | 解除 `/export` 501 | 待排期 |
+| B5 | KB v3：28 条星座/MBTI 片段改写为宠物第一人称视角并重发布（运营内容工作，身份行已兜底） | 不阻塞 | 已排期未开始 |
+| B6 | `memory_mcp` 注释与实库事实不符等文档清理 | 顺手 | 顺手 |
+
+### xiaozhi-server（语音后台）
+
+| # | 任务 | 说明 | 状态 |
+|---|------|------|------|
+| X1 | 真机 E2E 验收（最高优先）：b8 三项回归（think 不播报 / C5 首轮上下文 / 星座身份行）+ 旁路五类落库 + S1–S5 体验回归 + b9 旁路日志（tag=BIZ）取证；可视化清单见 prototype `e2e-checklist.html` | 全部代码已部署 | 待真机 |
+| X2 | Memory MCP 挂载收尾：compose 接入受控共享网络 + 私有 URL/token + 三工具白名单 + 真机成功调用一次 `memory.search` 并回填日志 | 契约已定稿、backend 已验收、2026-08-16 已开工 | 进行中 |
+
 ## 当前协作建议（2026-08-02，覆盖下方历史优先级）
 
 ### xiaozhi-server 仍需实现 / 验收
@@ -206,6 +248,7 @@
 | 旁路脱敏由谁执行（backend 落库前统一脱敏 = 当前决策） | 会话 B 实现旁路时 | 已定（docs/08） |
 | 上游 xiaozhi-esp32-server 钉 v0.9.6 | 会话 B | 已定（docs/08） |
 | **KB v2 片段宠物视角重写（v3）**：现有 28 条星座/MBTI KB 片段全是第三人称教练视角，导致模型无身份事实；需全部改写为宠物第一人称视角并重发布为 v3。属运营内容工作；backend 身份行注入（`8243e0d`）已先行兜底，不阻塞 | 人设真实感（admin/backend KB 运营） | 已排期，未开始 |
+| **dossier 用户可见/可编辑边界**：六字段（身份/背景/角色/目标/进化规则/关系）中哪些对 App 用户可见或可编辑、哪些仅作 Prompt 编译来源；原型 `my-pet.html` 暂按"关系 + 陪伴偏好可编辑、其余只读"假设 | app A1 我的星仔页 | 待产品拍板 |
 
 ## 进度日志
 
@@ -312,3 +355,4 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-16 | ai-pet-backend | **异步记忆分析 Worker 切换 MiniMax-M2.5**：千帆调用已连续返回 403，已在服务器私有 `.env` 更新后端 Worker 的 OpenAI 兼容地址、模型与密钥，并强制重建 `agent-worker`。容器内最小 Chat Completions 探测返回 HTTP 200 且响应结构正常；仅影响每日摘要、候选记忆和人设成长分析，不影响小智实时对话模型。 |
 | 2026-08-16 | xiaozhi-server | **失败可观测性（统一旁路日志 BIZ）随 `v0.9.6-b9` 上线**：`core/utils/integration_log.py` 覆盖 persona_pack/chat events/session end/peripheral events/C5 context provider，记录 `device_uid`、`session_id`、耗时、outcome（ok/retry/dropped/degraded）与降级原因，不记对话正文/token/完整 Prompt，后续 Memory MCP 直接复用；本地提交 `2ef6d07`（含契约定稿 docs 提交 `e5d5de9`）；容器级验证通过，真机日志证据随 E2E 验收一起取。 |
 | 2026-08-16 | xiaozhi-server | **Memory MCP 挂载开工**：已核实 `memory-mcp` 容器在 `ai-pet-backend_default` 网络（别名 `memory-mcp`，8000/tcp，无公网映射），小智 server 容器在 `xiaozhi-server_default`；下一步 compose 接入共享网络 + 私有 URL/token 配置 + 三工具挂载。 |
+| 2026-08-16 | prototype / 项目看板 | **原型第五次校准 + 任务拆分**：prototype 仓推送 `d640f2b`——index 现状板块刷新至 08-16（admin 全貌、MiniMax 链路、b8/b9、dossier、仅剩 2 个 501），新增 `e2e-checklist.html` 真机验收墙与 `my-pet.html` 我的星仔原型；按校准结论完成前后端任务拆分，见本文件"任务拆分（2026-08-16）"节；新增待决：dossier 用户可见/可编辑边界。 |
