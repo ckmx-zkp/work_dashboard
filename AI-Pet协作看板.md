@@ -120,7 +120,14 @@
 
 1. **真机 E2E 验收（最高优先）**：用真实设备依次证明 `devices/seen` 生成/更新资产、修改人设后 `persona_pack` 被拉取并改变下一会话 Prompt/默认表情、每轮 user/assistant 事件落入 backend、断开会话触发 `daily_summary` 入队、一次眼睛动作写入外设快照、问设备“你是什么星座”应自然承认天蝎座（身份行修复后的回归项）。
 2. **失败可观测性**：为上述旁路请求输出不含对话原文的状态码、重试次数、`device_uid`、`session_id` 日志/指标；确认 4xx 丢弃、5xx 有界重试且绝不阻塞语音/TTS。
-3. **Memory MCP 挂载（职责已定）**：backend 负责把已部署的真实记忆库工具以双方约定的 streamable HTTP MCP 暴露，并先更新 `docs/05` 契约；小智服务负责在实时会话中挂载 `memory.search/add/forget`、按 800ms~1.5s 超时、失败降级为“无记忆会话”，不得阻塞语音/TTS。后端 Worker 的候选记忆整理与小智实时会话模型是两条独立链路。
+3. **Memory MCP 挂载（请小智服务直接执行）**：
+   1. 在部署 compose 中将小智 server 容器接入 backend `memory-mcp` 所在的受控共享 Docker 网络；不得发布 MCP 端口到公网，也不得改走公网 IP。
+   2. 以私有配置设置 MCP URL 为该共享网络内的 `http://memory-mcp:8000/mcp`（以实际 network alias 为准）和 `X-Internal-Token`；密钥不得进入仓库、智控台或看板。
+   3. 在实时 LLM 工具白名单挂载 `memory.search`、`memory.add`、`memory.forget`；所有调用传规范化小写 MAC `device_uid`，不得传内部 `device_id`。
+   4. 设定 800ms～1.5s 超时、有限重试；401/4xx 不重试，5xx/网络异常有界重试，最终均降级为“无记忆会话”，绝不阻塞 ASR/LLM/TTS。
+   5. 验收：容器内携带 Token 的 MCP `initialize` 和 `tools/list` 返回 200 且列出三工具；真机对话中成功调用一次 `memory.search`，并在日志记录工具名、状态码、耗时、`device_uid`、`session_id`（不记录原始对话、Token、完整 Prompt）。完成后回填镜像提交、网络别名与真机结果。
+
+   后端 Worker 的候选记忆整理与小智实时会话模型是两条独立链路。
 4. **Context Provider 合并与真机验收（backend 与小智侧代码/部署均已完成，仅剩真机验收，见下）**：小智上游会在唤醒/构建 Prompt 时以 `device-id` 请求上下文源并替换 `{{ dynamic_context }}`。本仓已把固定基础行为 + backend persona_pack + 上游动态上下文合并为同一最终 Prompt（随 `v0.9.6-b8` 上线）；不得把完整 KB 或原始对话注入 Prompt。
 
 ### ai-pet-backend：C5 Context Provider（已部署，2026-08-02）
@@ -294,6 +301,7 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-15 | ai-pet-backend / xiaozhi-server | **C5 状态复核**：backend 提交 `85c05be` 的 `GET /api/internal/context/device` 已部署，内部鉴权真实设备请求 200；当前仅完成后端。小智服务须按看板配置私有 URL/token，按 `pet_default → persona_pack → dynamic_context` 单次合并最终 Prompt，并完成真机唤醒、日志及首轮语音验收；异常时仅降级动态上下文，不影响既有人设链路。 |
 | 2026-08-16 | ai-pet-backend / xiaozhi-server | **Memory MCP 职责确认**：后端已部署 memories 实库与 stdio 工具，下一步由 backend 提供并定稿 streamable HTTP MCP 契约；小智服务负责实时会话挂载、工具调用及 800ms~1.5s 超时降级。LLM 配置按用途分离：后端私有 `.env` 供异步摘要/候选记忆/人设成长 Worker，实时对话模型仍仅由小智服务私有模型配置管理；密钥不入仓或看板。 |
 | 2026-08-16 | ai-pet-backend / xiaozhi-server | **Memory MCP HTTP 服务已部署，契约已变更**：backend 提交 `5126fcb` 将 `memory-mcp` 改为受 `X-Internal-Token` 保护的 streamable HTTP `/mcp`，工具统一以 `device_uid` 调用；容器内验证无 Token 401、带 Token 初始化 200、三项工具均可列出，且未映射公网端口。`/api/internal/*` 路径与 persona 未配置 404/onboarding 降级语义已同步至两仓契约；待小智加入受控共享 Docker 网络并挂载。 |
+| 2026-08-16 | 项目看板 | **Memory MCP 小智交接清单已细化**：明确受控共享网络、私有 URL/token、三工具白名单、`device_uid` 入参、800ms～1.5s 超时与 4xx/5xx 降级策略，以及容器/真机验收和日志回填要求；可由小智服务会话直接执行。 |
 | 2026-08-02 | ai-pet-app | **原型核对后完成 C2 + D2 并部署**：记忆页接入用户端 memories 列表/搜索、手动新建、归档删除与 candidate 通过/忽略；日运/小记页接入 `daily_summary` analyses，兼容无结果等待态。`typecheck`、`build` 通过，ECS `:8081` 首页 200；未登录 memories/analyses 均预期 401。D3 导出与人设问卷仍因后端 501 阻塞。 |
 | 2026-08-02 | ai-pet-app | **C4 首页“我的星仔”已完成**：对当前选中设备读取 persona，展示星座、MBTI、知识库版本与跟随策略；切换设备重新请求，404 为“未设置人设”空态并保留设置入口。原型核对与后续计划已回写 app 文档；`typecheck`、`build` 通过，待真实账号设备完成受保护接口验收。 |
 | 2026-08-16 | xiaozhi-server | **C5 + MiniMax 思考隔离上线**：构建并切换 `xiaozhi-aipet-server:v0.9.6-b8`（b6 直跳 b8，b7 废弃）；`ThinkTagFilter` 跨 chunk 过滤（本地提交 `e93bb14`）+ `thinking:{type:disabled}` + direct_answer 兜底剥离，并补齐 `connection.py` 缺失的 dynamic_context 合入块；容器级验收通过（过滤器行为测试、直连 C5 200/7ms/真机 3 条、主机级 401/空降级复核）；智能体“测试1”主 LLM 切为 MiniMax-M2.5；仅剩真机验收。 |
