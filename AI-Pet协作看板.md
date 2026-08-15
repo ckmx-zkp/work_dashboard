@@ -110,16 +110,17 @@
 - ✅ 修复三处部署坑：OTA 下发占位域名（`server.fronted_url`/`server.ota`/`server.websocket` 已指向公网地址）、`server.auth_key` 与 `server.secret` 不一致（真机连不上的隐患）
 - ✅ 模型链路：LLM=MiniMax-M2.5（智能体“测试1”主用；千帆 `qianfan-code-latest`/GLM-4.5-Flash/Kimi K2.7 保留备用）；ASR=豆包流式 2.0（试用 20h）；TTS=火山双向流式·湾湾小何（`zh_female_wanwanxiaohe_moon_bigtts`）
 - ✅ 真机 `8c:fd:49:0c:a8:78` 激活绑定+首轮对话联通（唤醒→ASR→GLM 人设→TTS→眼睛 emotion 联动）；固件联调看板：`AI-Pet固件联调看板.md`（本目录）
-- 🟡 V0.2 业务集成：内网与内部鉴权已联通；`v0.9.6-b4` 已实现 persona_pack 定时刷新/缓存/onboarding、眼睛 MCP 外设状态旁路，`v0.9.6-b2` 已改为 MAC + 原生字符串 UUID 的 devices/seen、chat events、session end。四项均待真机 E2E 落库证据；Memory MCP 暂缓，待 backend 定传输。
+- 🟡 V0.2 业务集成：内网与内部鉴权已联通；`v0.9.6-b4` 已实现 persona_pack 定时刷新/缓存/onboarding、眼睛 MCP 外设状态旁路，`v0.9.6-b2` 已改为 MAC + 原生字符串 UUID 的 devices/seen、chat events、session end。四项均待真机 E2E 落库证据；Memory MCP 传输已定稿（streamable HTTP），待小智侧挂载。
 - ✅ **C5 + MiniMax 思考隔离已上线（2026-08-16）**：构建并切换 `xiaozhi-aipet-server:v0.9.6-b8`（线上由 b6 直跳 b8，b7 废弃）。内容：跨 chunk `<think>` 状态机过滤（`ThinkTagFilter`，本地提交 `e93bb14`）、MiniMax `thinking:{type:disabled}` 双保险、direct_answer 兜底剥离；并补齐服务器源码树 `connection.py` 此前缺失的 dynamic_context 合入块（否则 b7 即使上线 C5 也不会进 Prompt）。容器级验收通过：容器启动正常、容器内过滤器行为测试通过、容器内直连 C5 `GET /api/internal/context/device` 200/7ms/真机 3 条上下文；主机级复核：已认领真机 data 非空、未知设备空、无 token 401。仅剩真机验收。
 - ✅ **“宠物否认自己有星座”已修复（2026-08-16，backend 侧）**：真机问“你是什么星座”总答“我是AI宠物”。根因：KB v2 片段全是第三人称教练视角 + `pet_default`“不编造人设”约束，模型拿不到身份事实。修复：backend `compile_profile` 在 KB 片段前固定注入身份行（“你的星座是天蝎座，MBTI 是 ENFP……”），提交 `8243e0d` 已上线（web-api 已重建），已验证 persona_pack 首条即身份行；小智侧 300 秒刷新自动生效，无需改仓。KB v2 片段的宠物视角重写已列入排期（见待决事项）。
+- ✅ **失败可观测性已上线（2026-08-16）**：构建并切换 `xiaozhi-aipet-server:v0.9.6-b9`（b8 基础上叠加）。新增 `core/utils/integration_log.py` 统一旁路日志（tag=BIZ）：persona_pack、chat events、session end、peripheral events、C5 context provider 均记录 `device_uid`、`session_id`、耗时、outcome（ok/retry/dropped/degraded）与降级原因；重试中间过程仅 debug 不刷屏；不记录对话正文、token、完整 Prompt；接口通用，后续 Memory MCP 直接复用。本地提交 `2ef6d07`（含另一会话并入的契约定稿 docs 提交 `e5d5de9`）。容器级验证通过：b9 启动无错误、容器内 `log_op` 自测输出正确单行。真机日志证据随 E2E 验收一起取。
 
 ## 当前协作建议（2026-08-02，覆盖下方历史优先级）
 
 ### xiaozhi-server 仍需实现 / 验收
 
 1. **真机 E2E 验收（最高优先）**：用真实设备依次证明 `devices/seen` 生成/更新资产、修改人设后 `persona_pack` 被拉取并改变下一会话 Prompt/默认表情、每轮 user/assistant 事件落入 backend、断开会话触发 `daily_summary` 入队、一次眼睛动作写入外设快照、问设备“你是什么星座”应自然承认天蝎座（身份行修复后的回归项）。
-2. **失败可观测性**：为上述旁路请求输出不含对话原文的状态码、重试次数、`device_uid`、`session_id` 日志/指标；确认 4xx 丢弃、5xx 有界重试且绝不阻塞语音/TTS。
+2. **失败可观测性（已完成，2026-08-16 随 `v0.9.6-b9` 上线）**：统一旁路日志（tag=BIZ）已为各旁路请求输出不含对话原文的状态码/outcome（ok/retry/dropped/degraded）、重试次数、`device_uid`、`session_id`、耗时与降级原因；确认 4xx 丢弃、5xx 有界重试且绝不阻塞语音/TTS；待真机 E2E 验收时取真机日志证据。
 3. **Memory MCP 挂载（请小智服务直接执行）**：
    1. 在部署 compose 中将小智 server 容器接入 backend `memory-mcp` 所在的受控共享 Docker 网络；不得发布 MCP 端口到公网，也不得改走公网 IP。
    2. 以私有配置设置 MCP URL 为该共享网络内的 `http://memory-mcp:8000/mcp`（以实际 network alias 为准）和 `X-Internal-Token`；密钥不得进入仓库、智控台或看板。
@@ -195,7 +196,7 @@
 |------|--------|------|
 | **设备归属与管理台职责冲突**：admin 当前以 admin 用户身份调用用户 API `POST /devices/bind`，写入同一 `devices.user_id`；该字段非空时 app 用户绑定必然 409，角色不区分。产品期望“管理台登记/管理”不占用用户归属，需 backend 先更新设备契约与管理端专用接口（或明确 admin 仅可查看/解绑），再改 admin。临时测试可在原 admin 账号解绑，`user_id` 置空后由 app 认领，历史保留。 | app 用户绑定、admin 设备管理 | 待 backend/产品定夺，**禁止用 admin 绑定模拟设备登记** |
 | **设备身份契约已定，待实现**：MAC=`device_uid`（小智硬件核心 ID）；后端 `devices.id` 为平台管理 ID；后端首见 MAC 时生成独立、不可猜测的 app `binding_id`，app 只用该 ID 认领。admin 不得调用用户 bind 或占用 `user_id`；管理端另设设备资产接口。契约已更新至 backend docs/06。 | app B2、admin 设备管理 | E1.1 待实现 |
-| **Memory MCP 传输方式**：会话 B 建议 streamable HTTP MCP（同机 127.0.0.1 直连）；backend memory-mcp 现为 stdio 骨架，需会话 A 评估改造量并**先改 docs/05 契约**再实现 | C3 Memory MCP（会话 B 挂载开发） | 待会话 A 定夺 |
+| **Memory MCP 传输方式**：已定稿 streamable HTTP MCP（`http://memory-mcp:8000/mcp`，X-Internal-Token，白名单 memory.search/add/forget，超时 800ms~1.5s，失败降级无记忆）；契约 docs/05 已随 `e5d5de9` 更新，backend HTTP 服务已部署并验收，待小智侧加入受控共享 Docker 网络并实施挂载 | C3 Memory MCP（会话 B 挂载开发） | ✅ 已定稿，待小智侧挂载 |
 | **内置安全默认人设文案**：persona_pack 拉取失败的最终兜底 prompt 由谁供稿（建议产品/backend 出一版中性安全文案，会话 B 内置到配置）。**补充（用户拍板 2026-08-01）：该文案同时兼任"新设备未配置人设"的 onboarding 引导**（流程：设备激活→backend 无人设→引导人设陪聊→用户在 App/管理台配置→下轮会话生效） | 会话 B persona_pack 降级链 | 待会话 A/产品 |
 | **persona_pack "未配置"语义**：已定为 backend 返回 404；小智加载本地安全 onboarding 人设并继续会话，不将其作为重试故障。已写入 backend docs/06。 | 会话 B persona_pack 降级链 | ✅ 已定 |
 | 端口 8000 冲突：已定（backend web-api 用 8010，仅本机反代） | — | ✅ 已解决 |
@@ -307,3 +308,4 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-16 | xiaozhi-server | **C5 + MiniMax 思考隔离上线**：构建并切换 `xiaozhi-aipet-server:v0.9.6-b8`（b6 直跳 b8，b7 废弃）；`ThinkTagFilter` 跨 chunk 过滤（本地提交 `e93bb14`）+ `thinking:{type:disabled}` + direct_answer 兜底剥离，并补齐 `connection.py` 缺失的 dynamic_context 合入块；容器级验收通过（过滤器行为测试、直连 C5 200/7ms/真机 3 条、主机级 401/空降级复核）；智能体“测试1”主 LLM 切为 MiniMax-M2.5；仅剩真机验收。 |
 | 2026-08-16 | ai-pet-backend | **persona_pack 注入身份行，修复“宠物否认自己有星座”**：`compile_profile` 在 KB 片段前固定注入身份行（星座/MBTI 等），提交 `8243e0d` 已上线（web-api 已重建），persona_pack 首条即身份行已验证；KB v2 片段宠物视角重写（v3）列入排期；小智侧 300 秒刷新自动生效，无需改仓。 |
 | 2026-08-16 | ai-pet-backend | **异步记忆分析 Worker 切换 MiniMax-M2.5**：千帆调用已连续返回 403，已在服务器私有 `.env` 更新后端 Worker 的 OpenAI 兼容地址、模型与密钥，并强制重建 `agent-worker`。容器内最小 Chat Completions 探测返回 HTTP 200 且响应结构正常；仅影响每日摘要、候选记忆和人设成长分析，不影响小智实时对话模型。 |
+| 2026-08-16 | xiaozhi-server | **失败可观测性（统一旁路日志 BIZ）随 `v0.9.6-b9` 上线**：`core/utils/integration_log.py` 覆盖 persona_pack/chat events/session end/peripheral events/C5 context provider，记录 `device_uid`、`session_id`、耗时、outcome（ok/retry/dropped/degraded）与降级原因，不记对话正文/token/完整 Prompt，后续 Memory MCP 直接复用；本地提交 `2ef6d07`（含契约定稿 docs 提交 `e5d5de9`）；容器级验证通过，真机日志证据随 E2E 验收一起取。 |
