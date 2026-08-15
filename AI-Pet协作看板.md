@@ -118,18 +118,49 @@
 
 ## 任务拆分（2026-08-16 · 原型第五次校准）
 
-> 来源：prototype 仓《需求分析与下一步原型方案-2026-08.md》第五次校准（经五仓代码核实），配套原型 `e2e-checklist.html`（真机验收墙）与 `my-pet.html`（我的星仔）。总体顺序：真机 E2E 验收 > 接口已就绪的前端消费 > backend 新 Epic（E6.1 → E2.1 → E7.1 → E8）。
+> 来源：`prototype/需求分析与下一步原型方案-2026-08.md` 第五次校准（经五仓代码核实）。配套原型：`index.html`（总览）、`e2e-checklist.html`（真机验收墙）、`next-step.html`（人设三态）、`my-pet.html`（我的星仔）。
+> 总体顺序：真机 E2E 验收 > 接口已就绪的前端消费 > backend 新 Epic（E6.1 → E2.1 → E7.1 → E8）> 固件 OTA 腾挪与第二只眼 > 正式发布链。
+> 2026-08-16 二次补齐：在既有 app/admin/backend/xiaozhi 表上补固件、运维、原型仓、app 阻塞项与明确不进本轮项。
+
+### 取任务顺序（各会话）
+
+| 优先级 | 做什么 | 负责仓 |
+|---|---|---|
+| P0 | 真机 E2E 验收（b8/b9、旁路五类、S1–S5） | xiaozhi-server + 固件联调 |
+| P0 | Memory MCP 挂载收尾 | xiaozhi-server（backend 已就绪） |
+| P1 | 接口已上线、前端未消费：我的星仔 / 成长建议 / 人设第四态 / 管理台分析卡片与 dossier 编辑 | ai-pet-app、ai-pet-admin |
+| P1 | 日运页真实数据验收 | ai-pet-app |
+| P2 | backend 下一 Epic：E6.1 → E2.1 → E7.1 → E8 | ai-pet-backend |
+| P2 | 固件 OTA 分区腾挪（先于第二只眼） | ESP32 固件 |
+| P3 | 域名 + ICP + HTTPS/WSS | 运维 / 产品 |
+| 阻塞 | 配网引导、导出、问卷预览、记忆画像页、社交 | 见各表，不得提前画成可用 |
+
+### prototype（产品评审，不写生产代码）
+
+| # | 任务 | 说明 | 状态 |
+|---|---|---|---|
+| R0 | 总览页「代码现状」校准到 08-16 | `index.html` | ✅ 已交付 |
+| R1 | 真机 E2E 验收墙 | `e2e-checklist.html` | ✅ 已交付 |
+| R2 | 我的星仔 + 成长建议 + 人设第四态原型 | `my-pet.html`、`next-step.html` | ✅ 已交付 |
+| R3 | 管理台分析卡片视觉方向稿 | 仅供 admin 仓参考，不在本仓实现管理台 | 待排期 |
+| R4 | 真机验收后回写验收墙演示状态 | 不接真实接口；状态真源仍是本看板与固件联调看板 | 等 X1 |
 
 ### ai-pet-app（用户端前端）
 
 | # | 任务 | 依赖 / 说明 | 状态 |
 |---|------|-------------|------|
-| A1 | "我的星仔"角色档案页（原型 `my-pet.html` 已出稿）：dossier 六字段用户可读版，关系 + 陪伴偏好可编辑，身份/背景/角色/目标/进化规则只读；保存提示"下次实体对话生效" | GET/PUT persona dossier 已上线；**开工前待产品拍板字段可见边界（见待决事项）** | 待开发 |
+| A1 | 「我的星仔」角色档案页（原型 `my-pet.html` 已出稿）：dossier 六字段用户可读版，关系 + 陪伴偏好可编辑，身份/背景/角色/目标/进化规则只读；保存提示「下次实体对话生效」 | GET/PUT persona dossier 已上线；**开工前待产品拍板字段可见边界（见待决事项）** | 待开发 |
 | A2 | 成长建议卡：`kind=persona_growth` 建议/证据/置信度卡片 + `apply-persona-growth` 二次确认 | 接口已上线 | 待开发 |
-| A3 | 人设生效第四态"已验证生效"（P3 三态扩展） | 无新接口；与验收墙状态联动 | 待开发 |
-| A4 | B3 配网引导页 | 等固件最终配网步骤与素材 | 阻塞 |
+| A3 | 人设生效第四态「已验证生效」（P3 三态扩展） | 无新接口；与验收墙状态联动 | 待开发 |
+| A4 | B3 配网引导页 | 等固件 F3 最终配网步骤与素材 | 阻塞 |
 | A5 | 日运页真实数据验收：worker 修复后已重跑产出 8 条 `daily_summary`，App 刷新即可验证 | 2026-08-16 已具备条件 | 待验收 |
 | A6 | 文档债顺手回写：docs/06 的 D4 勾选、`PersonaView` 种子注释、docs/03 P2 的 binding_id 契约 | 无 | 顺手 |
+| A7 | 设备改名 / 解绑 UI | backend `PATCH`/`DELETE /devices/{id}` 已上线 | 待开发 |
+| A8 | D3 数据导出页 | 等 B4 解除 `/export` 501 | 阻塞 |
+| A9 | 记忆画像页 | 等 B1 E6.1 | 阻塞 |
+| A10 | 人设问卷入口 | 等 B2；不得在客户端算 MBTI | 阻塞 |
+| A11 | PWA 安装引导 / HTTPS 正式发布 | 等 O1 域名与证书 | 阻塞 |
+| A12 | 桌面增强 Epic E（宽屏分栏、窗口记忆） | 不阻塞 V0.2 | 待排期 |
 
 ### ai-pet-admin（管理台前端）
 
@@ -139,17 +170,19 @@
 | D2 | 设备资产列表真分页（现 `limit=100` 一次拉取，无分页控件） | 无 | 待开发 |
 | D3 | 空态/加载/错误统一规范 | 无 | 待开发 |
 | D4 | 仓内文档债：docs/02/03/04/06 回写已完成事实（停在 08-02 早晨） | 无 | 顺手 |
+| D5 | 设备详情 dossier 六字段编辑器 | Admin `PUT /devices/{id}/persona` 已上线；提示「下一次会话生效」 | 待开发 |
 
 ### ai-pet-backend（业务后端）
 
 | # | 任务 | 说明 | 状态 |
 |---|------|------|------|
-| B1 | E6.1 记忆画像：记忆变更入队 → LLM 产出 `memory_profile` 卡片 | app 画像页前置 | 待排期 |
-| B2 | E2.1 人设问卷 + `persona/preview` 编译预览（MBTI 算型在 backend，dry-run 不改库） | app/admin 预览前置 | 待排期 |
+| B1 | E6.1 记忆画像：记忆变更入队 → LLM 产出 `memory_profile` 卡片 | app A9 前置 | 待排期 |
+| B2 | E2.1 人设问卷 + `persona/preview` 编译预览（MBTI 算型在 backend，dry-run 不改库） | app A10 / admin 预览前置 | 待排期 |
 | B3 | E7.1 KB 反馈候选 → 草稿闭环 | 运营闭环 | 待排期 |
-| B4 | E8：异步 export、数据保留清理（90/180 天）、运营监控与 LLM 成本/失败指标 | 解除 `/export` 501 | 待排期 |
+| B4 | E8：异步 export、数据保留清理（90/180 天）、运营监控与 LLM 成本/失败指标 | 解除 `/export` 501，解锁 app A8 | 待排期 |
 | B5 | KB v3：28 条星座/MBTI 片段改写为宠物第一人称视角并重发布（运营内容工作，身份行已兜底） | 不阻塞 | 已排期未开始 |
 | B6 | `memory_mcp` 注释与实库事实不符等文档清理 | 顺手 | 顺手 |
+| B7 | 与 E8 一并定：`daily_summary` 生成时机、失败可见性、重试策略与数据保留期限 | 待产品/会话 A | 待拍板 |
 
 ### xiaozhi-server（语音后台）
 
@@ -157,6 +190,33 @@
 |---|------|------|------|
 | X1 | 真机 E2E 验收（最高优先）：b8 三项回归（think 不播报 / C5 首轮上下文 / 星座身份行）+ 旁路五类落库 + S1–S5 体验回归 + b9 旁路日志（tag=BIZ）取证；可视化清单见 prototype `e2e-checklist.html` | 全部代码已部署 | 待真机 |
 | X2 | Memory MCP 挂载收尾：compose 接入受控共享网络 + 私有 URL/token + 三工具白名单 + 真机成功调用一次 `memory.search` 并回填日志 | 契约已定稿、backend 已验收、2026-08-16 已开工 | 进行中 |
+
+### ESP32_XIAOZHI / 固件（`xiaozhi-esp32/`）
+
+| # | 任务 | 说明 | 状态 |
+|---|------|------|------|
+| F1 | OTA 资源迁出当前分区（镜像占用约 92.53%） | 当前最硬资源约束，须先于第二只眼 | 待开发 |
+| F2 | 第二只眼（规划 CS=IO29） | 依赖 F1 | 待开发 |
+| F3 | 交付最终配网步骤与图文素材给 app A4 | 阻塞用户端 B3 | 待固件/产品 |
+| F4 | WakeNet 误唤醒阈值 | 端侧问题，待用户拍板；服务端勿当 ASR/LLM bug | 待拍板 |
+| F5 | PetBehaviorController + WS2812 + 双舵机 | V0.3 体验层；`main/pet/` 类型层尚未提交接线 | 待排期 |
+| F6 | K230 UART 视觉 | V0.3+ | 待排期 |
+
+固件联调细节仍写 `AI-Pet固件联调看板.md`，此处只记跨仓归属。
+
+### ai-pet-ops（运维）
+
+| # | 任务 | 说明 | 状态 |
+|---|------|------|------|
+| O1 | 域名 + ICP 备案 + Caddy 收 443 / MQTTS 8883 | 阻塞 App HTTPS、PWA 安装、设备 WSS | 未开始 |
+| O2 | 状态采集器正式部署与告警 | 仓内仍为 V0 骨架；不得自动重启业务容器 | 待排期 |
+
+### 明确不进本轮（禁止当作当前可做）
+
+- 社交 / Feed / 排行榜 / 重型养成：E9 仅 docs/11 定稿，固件 BLE 未开发；启动前须隐私方案评审。
+- App 直连设备、实时语音、眼睛/舵机 MCP 控制：架构红线，App 只读设备状态。
+- 用问卷替代现有星座/MBTI 直选：问卷端点仍为 501。
+- 把未实现能力画成当前可用；原型与产品页必须区分已上线 / 等待后端 / 等待硬件。
 
 ## 当前协作建议（2026-08-02，覆盖下方历史优先级）
 
@@ -237,8 +297,8 @@
 
 | 事项 | 阻塞谁 | 状态 |
 |------|--------|------|
-| **设备归属与管理台职责冲突**：admin 当前以 admin 用户身份调用用户 API `POST /devices/bind`，写入同一 `devices.user_id`；该字段非空时 app 用户绑定必然 409，角色不区分。产品期望“管理台登记/管理”不占用用户归属，需 backend 先更新设备契约与管理端专用接口（或明确 admin 仅可查看/解绑），再改 admin。临时测试可在原 admin 账号解绑，`user_id` 置空后由 app 认领，历史保留。 | app 用户绑定、admin 设备管理 | 待 backend/产品定夺，**禁止用 admin 绑定模拟设备登记** |
-| **设备身份契约已定，待实现**：MAC=`device_uid`（小智硬件核心 ID）；后端 `devices.id` 为平台管理 ID；后端首见 MAC 时生成独立、不可猜测的 app `binding_id`，app 只用该 ID 认领。admin 不得调用用户 bind 或占用 `user_id`；管理端另设设备资产接口。契约已更新至 backend docs/06。 | app B2、admin 设备管理 | E1.1 待实现 |
+| **设备归属与管理台职责冲突**：admin 曾以用户 API `POST /devices/bind` 占用 `devices.user_id`。E1.1 已部署：admin 禁绑、用户端用 `binding_id` 认领、管理端改走资产接口。 | — | ✅ 已解决（E1.1） |
+| **设备身份契约**：MAC=`device_uid`；平台 `devices.id`；app 只用不可猜测的 `binding_id` 认领；admin 不得占用 `user_id`。契约在 backend docs/06，实现已上线。 | — | ✅ 已部署 |
 | **Memory MCP 传输方式**：已定稿 streamable HTTP MCP（`http://memory-mcp:8000/mcp`，X-Internal-Token，白名单 memory.search/add/forget，超时 800ms~1.5s，失败降级无记忆）；契约 docs/05 已随 `e5d5de9` 更新，backend HTTP 服务已部署并验收，待小智侧加入受控共享 Docker 网络并实施挂载 | C3 Memory MCP（会话 B 挂载开发） | ✅ 已定稿，待小智侧挂载 |
 | **内置安全默认人设文案**：persona_pack 拉取失败的最终兜底 prompt 由谁供稿（建议产品/backend 出一版中性安全文案，会话 B 内置到配置）。**补充（用户拍板 2026-08-01）：该文案同时兼任"新设备未配置人设"的 onboarding 引导**（流程：设备激活→backend 无人设→引导人设陪聊→用户在 App/管理台配置→下轮会话生效） | 会话 B persona_pack 降级链 | 待会话 A/产品 |
 | **persona_pack "未配置"语义**：已定为 backend 返回 404；小智加载本地安全 onboarding 人设并继续会话，不将其作为重试故障。已写入 backend docs/06。 | 会话 B persona_pack 降级链 | ✅ 已定 |
@@ -249,6 +309,7 @@
 | 上游 xiaozhi-esp32-server 钉 v0.9.6 | 会话 B | 已定（docs/08） |
 | **KB v2 片段宠物视角重写（v3）**：现有 28 条星座/MBTI KB 片段全是第三人称教练视角，导致模型无身份事实；需全部改写为宠物第一人称视角并重发布为 v3。属运营内容工作；backend 身份行注入（`8243e0d`）已先行兜底，不阻塞 | 人设真实感（admin/backend KB 运营） | 已排期，未开始 |
 | **dossier 用户可见/可编辑边界**：六字段（身份/背景/角色/目标/进化规则/关系）中哪些对 App 用户可见或可编辑、哪些仅作 Prompt 编译来源；原型 `my-pet.html` 暂按"关系 + 陪伴偏好可编辑、其余只读"假设 | app A1 我的星仔页 | 待产品拍板 |
+| **S3 硬件变体是否进 V0.3**：`hardware/` 原理图审核资料 + `pet_platform_config.h` 双平台矩阵 | 固件排期、BOM | 待产品拍板 |
 
 ## 进度日志
 
@@ -356,3 +417,4 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-16 | xiaozhi-server | **失败可观测性（统一旁路日志 BIZ）随 `v0.9.6-b9` 上线**：`core/utils/integration_log.py` 覆盖 persona_pack/chat events/session end/peripheral events/C5 context provider，记录 `device_uid`、`session_id`、耗时、outcome（ok/retry/dropped/degraded）与降级原因，不记对话正文/token/完整 Prompt，后续 Memory MCP 直接复用；本地提交 `2ef6d07`（含契约定稿 docs 提交 `e5d5de9`）；容器级验证通过，真机日志证据随 E2E 验收一起取。 |
 | 2026-08-16 | xiaozhi-server | **Memory MCP 挂载开工**：已核实 `memory-mcp` 容器在 `ai-pet-backend_default` 网络（别名 `memory-mcp`，8000/tcp，无公网映射），小智 server 容器在 `xiaozhi-server_default`；下一步 compose 接入共享网络 + 私有 URL/token 配置 + 三工具挂载。 |
 | 2026-08-16 | prototype / 项目看板 | **原型第五次校准 + 任务拆分**：prototype 仓推送 `d640f2b`——index 现状板块刷新至 08-16（admin 全貌、MiniMax 链路、b8/b9、dossier、仅剩 2 个 501），新增 `e2e-checklist.html` 真机验收墙与 `my-pet.html` 我的星仔原型；按校准结论完成前后端任务拆分，见本文件"任务拆分（2026-08-16）"节；新增待决：dossier 用户可见/可编辑边界。 |
+| 2026-08-16 | prototype / 项目看板 | **任务拆分二次补齐**：补固件 F1–F6、运维 O1–O2、原型 R0–R4、app 阻塞项 A7–A12、admin dossier 编辑器 D5、backend B7；核销两则过期待决（设备归属冲突、binding_id 待实现）；新增待决：S3 硬件变体是否进 V0.3。 |
