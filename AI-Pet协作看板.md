@@ -112,12 +112,13 @@
 - ✅ 真机 `8c:fd:49:0c:a8:78` 激活绑定+首轮对话联通（唤醒→ASR→GLM 人设→TTS→眼睛 emotion 联动）；固件联调看板：`AI-Pet固件联调看板.md`（本目录）
 - 🟡 V0.2 业务集成：内网与内部鉴权已联通；`v0.9.6-b4` 已实现 persona_pack 定时刷新/缓存/onboarding、眼睛 MCP 外设状态旁路，`v0.9.6-b2` 已改为 MAC + 原生字符串 UUID 的 devices/seen、chat events、session end。四项均待真机 E2E 落库证据；Memory MCP 暂缓，待 backend 定传输。
 - ✅ **C5 + MiniMax 思考隔离已上线（2026-08-16）**：构建并切换 `xiaozhi-aipet-server:v0.9.6-b8`（线上由 b6 直跳 b8，b7 废弃）。内容：跨 chunk `<think>` 状态机过滤（`ThinkTagFilter`，本地提交 `e93bb14`）、MiniMax `thinking:{type:disabled}` 双保险、direct_answer 兜底剥离；并补齐服务器源码树 `connection.py` 此前缺失的 dynamic_context 合入块（否则 b7 即使上线 C5 也不会进 Prompt）。容器级验收通过：容器启动正常、容器内过滤器行为测试通过、容器内直连 C5 `GET /api/internal/context/device` 200/7ms/真机 3 条上下文；主机级复核：已认领真机 data 非空、未知设备空、无 token 401。仅剩真机验收。
+- ✅ **“宠物否认自己有星座”已修复（2026-08-16，backend 侧）**：真机问“你是什么星座”总答“我是AI宠物”。根因：KB v2 片段全是第三人称教练视角 + `pet_default`“不编造人设”约束，模型拿不到身份事实。修复：backend `compile_profile` 在 KB 片段前固定注入身份行（“你的星座是天蝎座，MBTI 是 ENFP……”），提交 `8243e0d` 已上线（web-api 已重建），已验证 persona_pack 首条即身份行；小智侧 300 秒刷新自动生效，无需改仓。KB v2 片段的宠物视角重写已列入排期（见待决事项）。
 
 ## 当前协作建议（2026-08-02，覆盖下方历史优先级）
 
 ### xiaozhi-server 仍需实现 / 验收
 
-1. **真机 E2E 验收（最高优先）**：用真实设备依次证明 `devices/seen` 生成/更新资产、修改人设后 `persona_pack` 被拉取并改变下一会话 Prompt/默认表情、每轮 user/assistant 事件落入 backend、断开会话触发 `daily_summary` 入队、一次眼睛动作写入外设快照。
+1. **真机 E2E 验收（最高优先）**：用真实设备依次证明 `devices/seen` 生成/更新资产、修改人设后 `persona_pack` 被拉取并改变下一会话 Prompt/默认表情、每轮 user/assistant 事件落入 backend、断开会话触发 `daily_summary` 入队、一次眼睛动作写入外设快照、问设备“你是什么星座”应自然承认天蝎座（身份行修复后的回归项）。
 2. **失败可观测性**：为上述旁路请求输出不含对话原文的状态码、重试次数、`device_uid`、`session_id` 日志/指标；确认 4xx 丢弃、5xx 有界重试且绝不阻塞语音/TTS。
 3. **Memory MCP 挂载暂不开发**：等待 backend 先实现 memories 实库并将 stdio 改为双方确认的 HTTP MCP 契约；届时按超时降级为“无记忆会话”。
 4. **Context Provider 合并与真机验收（backend 与小智侧代码/部署均已完成，仅剩真机验收，见下）**：小智上游会在唤醒/构建 Prompt 时以 `device-id` 请求上下文源并替换 `{{ dynamic_context }}`。本仓已把固定基础行为 + backend persona_pack + 上游动态上下文合并为同一最终 Prompt（随 `v0.9.6-b8` 上线）；不得把完整 KB 或原始对话注入 Prompt。
@@ -195,6 +196,7 @@
 | 域名 + ICP 备案（Caddy 收 443、MQTT 8883 前提） | 双方联调 | 未开始 |
 | 旁路脱敏由谁执行（backend 落库前统一脱敏 = 当前决策） | 会话 B 实现旁路时 | 已定（docs/08） |
 | 上游 xiaozhi-esp32-server 钉 v0.9.6 | 会话 B | 已定（docs/08） |
+| **KB v2 片段宠物视角重写（v3）**：现有 28 条星座/MBTI KB 片段全是第三人称教练视角，导致模型无身份事实；需全部改写为宠物第一人称视角并重发布为 v3。属运营内容工作；backend 身份行注入（`8243e0d`）已先行兜底，不阻塞 | 人设真实感（admin/backend KB 运营） | 已排期，未开始 |
 
 ## 进度日志
 
@@ -293,3 +295,4 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-02 | ai-pet-app | **原型核对后完成 C2 + D2 并部署**：记忆页接入用户端 memories 列表/搜索、手动新建、归档删除与 candidate 通过/忽略；日运/小记页接入 `daily_summary` analyses，兼容无结果等待态。`typecheck`、`build` 通过，ECS `:8081` 首页 200；未登录 memories/analyses 均预期 401。D3 导出与人设问卷仍因后端 501 阻塞。 |
 | 2026-08-02 | ai-pet-app | **C4 首页“我的星仔”已完成**：对当前选中设备读取 persona，展示星座、MBTI、知识库版本与跟随策略；切换设备重新请求，404 为“未设置人设”空态并保留设置入口。原型核对与后续计划已回写 app 文档；`typecheck`、`build` 通过，待真实账号设备完成受保护接口验收。 |
 | 2026-08-16 | xiaozhi-server | **C5 + MiniMax 思考隔离上线**：构建并切换 `xiaozhi-aipet-server:v0.9.6-b8`（b6 直跳 b8，b7 废弃）；`ThinkTagFilter` 跨 chunk 过滤（本地提交 `e93bb14`）+ `thinking:{type:disabled}` + direct_answer 兜底剥离，并补齐 `connection.py` 缺失的 dynamic_context 合入块；容器级验收通过（过滤器行为测试、直连 C5 200/7ms/真机 3 条、主机级 401/空降级复核）；智能体“测试1”主 LLM 切为 MiniMax-M2.5；仅剩真机验收。 |
+| 2026-08-16 | ai-pet-backend | **persona_pack 注入身份行，修复“宠物否认自己有星座”**：`compile_profile` 在 KB 片段前固定注入身份行（星座/MBTI 等），提交 `8243e0d` 已上线（web-api 已重建），persona_pack 首条即身份行已验证；KB v2 片段宠物视角重写（v3）列入排期；小智侧 300 秒刷新自动生效，无需改仓。 |
