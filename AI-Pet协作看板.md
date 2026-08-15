@@ -48,7 +48,7 @@
 | 转写旁路写入 | `POST /api/internal/chat/events` | ✅ 已实现（**当前真契约**：5 字段，`session_id`=字符串 UUID） | 🟡 已改为原生字符串 UUID 并随自建镜像 `v0.9.6-b2` 部署；待真机提交 user/assistant 两条事件验收 | 待验收 |
 | 外设状态快照 | `POST /api/internal/peripheral/events` | ✅ 已实现：单行全量覆盖写 | 🟡 已随 `v0.9.6-b4` 部署：成功的眼睛 MCP 调用映射 emotion/gaze/closed 并异步上报 | 待真机眼睛动作验收 |
 | 会话结束通知 | `POST /api/internal/chat/sessions/{id}/end` | ✅ 路由已注册 | 🟡 已改用连接原生字符串 UUID 并随 `v0.9.6-b2` 部署；待一次真实断开会话验收 | 待验收 |
-| Memory MCP 挂载 | streamable HTTP MCP `/mcp`，`memory.search/add/forget`，超时 800ms~1.5s | ✅ 已部署 `memory-mcp` HTTP 服务：内部 Token 401、初始化及三工具清单均已验收；工具统一使用 `device_uid`，未映射公网端口 | ⏳ 待加入受控共享 Docker 网络并在实时会话挂载、调用、超时降级 | 后端服务端已验收；待小智挂载 |
+| Memory MCP 挂载 | streamable HTTP MCP `/mcp`，`memory.search/add/forget`，超时 800ms~1.5s | ✅ 已部署 `memory-mcp` HTTP 服务：内部 Token 401、初始化及三工具清单均已验收；工具统一使用 `device_uid`，未映射公网端口 | 🟡 已随 `v0.9.6-b10` 部署：加入 `ai-pet-backend_default`、私有 `http://memory-mcp:8000/mcp`、三工具白名单、1.2s 超时、4xx 不重试；容器级 list/search/401 已验 | 容器级已联通；待真机调用 |
 | device_id 对齐 | 小写冒号 MAC `device_uid`（如 `8c:fd:49:0c:a8:78`） | ✅ 已部署：`devices/seen` 以 MAC 建立资产，生成独立 app `binding_id` | 🟡 连接时已规范化 MAC 并异步调用 `devices/seen`，随 `v0.9.6-b2` 部署；待查 backend 资产记录验收 | 待验收 |
 | 鉴权 | `/api/internal/*` 走 `X-Internal-Token` | ✅ 已实现 | ✅ 已配置并随旁路请求发送；真实请求到达 backend | 已联通 |
 
@@ -110,11 +110,11 @@
 - ✅ 修复三处部署坑：OTA 下发占位域名（`server.fronted_url`/`server.ota`/`server.websocket` 已指向公网地址）、`server.auth_key` 与 `server.secret` 不一致（真机连不上的隐患）
 - ✅ 模型链路：LLM=MiniMax-M2.5（智能体“测试1”主用；千帆 `qianfan-code-latest`/GLM-4.5-Flash/Kimi K2.7 保留备用）；ASR=豆包流式 2.0（试用 20h）；TTS=火山双向流式·湾湾小何（`zh_female_wanwanxiaohe_moon_bigtts`）
 - ✅ 真机 `8c:fd:49:0c:a8:78` 激活绑定+首轮对话联通（唤醒→ASR→GLM 人设→TTS→眼睛 emotion 联动）；固件联调看板：`AI-Pet固件联调看板.md`（本目录）
-- 🟡 V0.2 业务集成：内网与内部鉴权已联通；`v0.9.6-b4` 已实现 persona_pack 定时刷新/缓存/onboarding、眼睛 MCP 外设状态旁路，`v0.9.6-b2` 已改为 MAC + 原生字符串 UUID 的 devices/seen、chat events、session end。四项均待真机 E2E 落库证据；Memory MCP 传输已定稿（streamable HTTP），待小智侧挂载。
+- 🟡 V0.2 业务集成：内网与内部鉴权已联通；`v0.9.6-b4` 已实现 persona_pack 定时刷新/缓存/onboarding、眼睛 MCP 外设状态旁路，`v0.9.6-b2` 已改为 MAC + 原生字符串 UUID 的 devices/seen、chat events、session end。四项均待真机 E2E 落库证据。
 - ✅ **C5 + MiniMax 思考隔离已上线（2026-08-16）**：构建并切换 `xiaozhi-aipet-server:v0.9.6-b8`（线上由 b6 直跳 b8，b7 废弃）。内容：跨 chunk `<think>` 状态机过滤（`ThinkTagFilter`，本地提交 `e93bb14`）、MiniMax `thinking:{type:disabled}` 双保险、direct_answer 兜底剥离；并补齐服务器源码树 `connection.py` 此前缺失的 dynamic_context 合入块（否则 b7 即使上线 C5 也不会进 Prompt）。容器级验收通过：容器启动正常、容器内过滤器行为测试通过、容器内直连 C5 `GET /api/internal/context/device` 200/7ms/真机 3 条上下文；主机级复核：已认领真机 data 非空、未知设备空、无 token 401。仅剩真机验收。
 - ✅ **“宠物否认自己有星座”已修复（2026-08-16，backend 侧）**：真机问“你是什么星座”总答“我是AI宠物”。根因：KB v2 片段全是第三人称教练视角 + `pet_default`“不编造人设”约束，模型拿不到身份事实。修复：backend `compile_profile` 在 KB 片段前固定注入身份行（“你的星座是天蝎座，MBTI 是 ENFP……”），提交 `8243e0d` 已上线（web-api 已重建），已验证 persona_pack 首条即身份行；小智侧 300 秒刷新自动生效，无需改仓。KB v2 片段的宠物视角重写已列入排期（见待决事项）。
 - ✅ **失败可观测性已上线（2026-08-16）**：构建并切换 `xiaozhi-aipet-server:v0.9.6-b9`（b8 基础上叠加）。新增 `core/utils/integration_log.py` 统一旁路日志（tag=BIZ）：persona_pack、chat events、session end、peripheral events、C5 context provider 均记录 `device_uid`、`session_id`、耗时、outcome（ok/retry/dropped/degraded）与降级原因；重试中间过程仅 debug 不刷屏；不记录对话正文、token、完整 Prompt；接口通用，后续 Memory MCP 直接复用。本地提交 `2ef6d07`（含另一会话并入的契约定稿 docs 提交 `e5d5de9`）。容器级验证通过：b9 启动无错误、容器内 `log_op` 自测输出正确单行。真机日志证据随 E2E 验收一起取。
-- 🟡 **Memory MCP 挂载实施中（2026-08-16 开工）**：服务器网络已核实——`memory-mcp` 容器在 `ai-pet-backend_default` 网络（别名 `memory-mcp`，8000/tcp，未映射公网），小智 server 容器在 `xiaozhi-server_default` 网络；下一步将小智 server 容器接入共享网络后按交接清单配置私有 URL/token 并挂载三工具。
+- ✅ **Memory MCP 已挂载（2026-08-16，`v0.9.6-b10`，提交 `ae620da`）**：小智 server 同时加入 `xiaozhi-server_default` 与 `ai-pet-backend_default`；私有配置 `memory_mcp.url=http://memory-mcp:8000/mcp`（token 复用 `business_api`，未写入仓库/智控台/看板）。容器级验收：DNS 解析 `memory-mcp`、`tools/list` 列出 `memory.search/add/forget`、`memory.search` 5ms/ok（真机 MAC，items=0）、错误 token 401 且不重试；BIZ 日志含工具名/耗时/`device_uid`/`session_id`，不含 token 或记忆正文。本机 8002 HTTP 200、8000 端口开放。真机对话调用一次 `memory.search` 仍待 X1。
 
 ## 任务拆分（2026-08-16 · 原型第五次校准）
 
@@ -127,7 +127,7 @@
 | 优先级 | 做什么 | 负责仓 |
 |---|---|---|
 | P0 | 真机 E2E 验收（b8/b9、旁路五类、S1–S5） | xiaozhi-server + 固件联调 |
-| P0 | Memory MCP 挂载收尾 | xiaozhi-server（backend 已就绪） |
+| P0 | Memory MCP 真机调用一次 `memory.search` | xiaozhi-server（容器级已完成） |
 | P1 | 接口已上线、前端未消费：我的星仔 / 成长建议 / 人设第四态 / 管理台分析卡片与 dossier 编辑 | ai-pet-app、ai-pet-admin |
 | P1 | 日运页真实数据验收 | ai-pet-app |
 | P2 | backend 下一 Epic：E6.1 → E2.1 → E7.1 → E8 | ai-pet-backend |
@@ -188,8 +188,8 @@
 
 | # | 任务 | 说明 | 状态 |
 |---|------|------|------|
-| X1 | 真机 E2E 验收（最高优先）：b8 三项回归（think 不播报 / C5 首轮上下文 / 星座身份行）+ 旁路五类落库 + S1–S5 体验回归 + b9 旁路日志（tag=BIZ）取证；可视化清单见 prototype `e2e-checklist.html` | 全部代码已部署 | 待真机 |
-| X2 | Memory MCP 挂载收尾：compose 接入受控共享网络 + 私有 URL/token + 三工具白名单 + 真机成功调用一次 `memory.search` 并回填日志 | 契约已定稿、backend 已验收、2026-08-16 已开工 | 进行中 |
+| X1 | 真机 E2E 验收（最高优先）：b8 三项回归（think 不播报 / C5 首轮上下文 / 星座身份行）+ 旁路五类落库 + S1–S5 体验回归 + b9 旁路日志（tag=BIZ）取证 + b10 真机一次 `memory.search`；可视化清单见 prototype `e2e-checklist.html` | 全部代码已部署 | 待真机 |
+| X2 | Memory MCP 挂载：compose 接入受控共享网络 + 私有 URL/token + 三工具白名单 + 超时降级 | 已随 `v0.9.6-b10` 部署并完成容器级验收；真机调用并入 X1 | 容器级完成，待真机 |
 
 ### ESP32_XIAOZHI / 固件（`xiaozhi-esp32/`）
 
@@ -224,12 +224,7 @@
 
 1. **真机 E2E 验收（最高优先）**：用真实设备依次证明 `devices/seen` 生成/更新资产、修改人设后 `persona_pack` 被拉取并改变下一会话 Prompt/默认表情、每轮 user/assistant 事件落入 backend、断开会话触发 `daily_summary` 入队、一次眼睛动作写入外设快照、问设备“你是什么星座”应自然承认天蝎座（身份行修复后的回归项）。
 2. **失败可观测性（已完成，2026-08-16 随 `v0.9.6-b9` 上线）**：统一旁路日志（tag=BIZ）已为各旁路请求输出不含对话原文的状态码/outcome（ok/retry/dropped/degraded）、重试次数、`device_uid`、`session_id`、耗时与降级原因；确认 4xx 丢弃、5xx 有界重试且绝不阻塞语音/TTS；待真机 E2E 验收时取真机日志证据。
-3. **Memory MCP 挂载（请小智服务直接执行；实施中，2026-08-16 开工，网络已核实见进度区）**：
-   1. 在部署 compose 中将小智 server 容器接入 backend `memory-mcp` 所在的受控共享 Docker 网络；不得发布 MCP 端口到公网，也不得改走公网 IP。
-   2. 以私有配置设置 MCP URL 为该共享网络内的 `http://memory-mcp:8000/mcp`（以实际 network alias 为准）和 `X-Internal-Token`；密钥不得进入仓库、智控台或看板。
-   3. 在实时 LLM 工具白名单挂载 `memory.search`、`memory.add`、`memory.forget`；所有调用传规范化小写 MAC `device_uid`，不得传内部 `device_id`。
-   4. 设定 800ms～1.5s 超时、有限重试；401/4xx 不重试，5xx/网络异常有界重试，最终均降级为“无记忆会话”，绝不阻塞 ASR/LLM/TTS。
-   5. 验收：容器内携带 Token 的 MCP `initialize` 和 `tools/list` 返回 200 且列出三工具；真机对话中成功调用一次 `memory.search`，并在日志记录工具名、状态码、耗时、`device_uid`、`session_id`（不记录原始对话、Token、完整 Prompt）。完成后回填镜像提交、网络别名与真机结果。
+3. **Memory MCP 挂载（容器级已完成，2026-08-16，`v0.9.6-b10` / `ae620da`）**：小智 server 已加入 `ai-pet-backend_default`；私有 URL 为 `http://memory-mcp:8000/mcp`；三工具已挂到实时会话；超时 1.2s、4xx 不重试、5xx/网络有界重试、失败降级无记忆。容器级 `tools/list` 与 `memory.search` 已通。剩余：真机对话成功调用一次 `memory.search` 并取 BIZ 日志（并入 X1）。
 
    后端 Worker 的候选记忆整理与小智实时会话模型是两条独立链路。
 4. **Context Provider 合并与真机验收（backend 与小智侧代码/部署均已完成，仅剩真机验收，见下）**：小智上游会在唤醒/构建 Prompt 时以 `device-id` 请求上下文源并替换 `{{ dynamic_context }}`。本仓已把固定基础行为 + backend persona_pack + 上游动态上下文合并为同一最终 Prompt（随 `v0.9.6-b8` 上线）；不得把完整 KB 或原始对话注入 Prompt。
@@ -299,7 +294,7 @@
 |------|--------|------|
 | **设备归属与管理台职责冲突**：admin 曾以用户 API `POST /devices/bind` 占用 `devices.user_id`。E1.1 已部署：admin 禁绑、用户端用 `binding_id` 认领、管理端改走资产接口。 | — | ✅ 已解决（E1.1） |
 | **设备身份契约**：MAC=`device_uid`；平台 `devices.id`；app 只用不可猜测的 `binding_id` 认领；admin 不得占用 `user_id`。契约在 backend docs/06，实现已上线。 | — | ✅ 已部署 |
-| **Memory MCP 传输方式**：已定稿 streamable HTTP MCP（`http://memory-mcp:8000/mcp`，X-Internal-Token，白名单 memory.search/add/forget，超时 800ms~1.5s，失败降级无记忆）；契约 docs/05 已随 `e5d5de9` 更新，backend HTTP 服务已部署并验收，待小智侧加入受控共享 Docker 网络并实施挂载 | C3 Memory MCP（会话 B 挂载开发） | ✅ 已定稿，待小智侧挂载 |
+| **Memory MCP 传输方式**：已定稿 streamable HTTP MCP（`http://memory-mcp:8000/mcp`，X-Internal-Token，白名单 memory.search/add/forget，超时 800ms~1.5s，失败降级无记忆）；契约 docs/05 已随 `e5d5de9` 更新；小智已随 `v0.9.6-b10` 完成共享网络与容器级挂载 | C3 Memory MCP | ✅ 容器级已挂载，待真机调用 |
 | **内置安全默认人设文案**：persona_pack 拉取失败的最终兜底 prompt 由谁供稿（建议产品/backend 出一版中性安全文案，会话 B 内置到配置）。**补充（用户拍板 2026-08-01）：该文案同时兼任"新设备未配置人设"的 onboarding 引导**（流程：设备激活→backend 无人设→引导人设陪聊→用户在 App/管理台配置→下轮会话生效） | 会话 B persona_pack 降级链 | 待会话 A/产品 |
 | **persona_pack "未配置"语义**：已定为 backend 返回 404；小智加载本地安全 onboarding 人设并继续会话，不将其作为重试故障。已写入 backend docs/06。 | 会话 B persona_pack 降级链 | ✅ 已定 |
 | 端口 8000 冲突：已定（backend web-api 用 8010，仅本机反代） | — | ✅ 已解决 |
@@ -418,3 +413,4 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-16 | xiaozhi-server | **Memory MCP 挂载开工**：已核实 `memory-mcp` 容器在 `ai-pet-backend_default` 网络（别名 `memory-mcp`，8000/tcp，无公网映射），小智 server 容器在 `xiaozhi-server_default`；下一步 compose 接入共享网络 + 私有 URL/token 配置 + 三工具挂载。 |
 | 2026-08-16 | prototype / 项目看板 | **原型第五次校准 + 任务拆分**：prototype 仓推送 `d640f2b`——index 现状板块刷新至 08-16（admin 全貌、MiniMax 链路、b8/b9、dossier、仅剩 2 个 501），新增 `e2e-checklist.html` 真机验收墙与 `my-pet.html` 我的星仔原型；按校准结论完成前后端任务拆分，见本文件"任务拆分（2026-08-16）"节；新增待决：dossier 用户可见/可编辑边界。 |
 | 2026-08-16 | prototype / 项目看板 | **任务拆分二次补齐**：补固件 F1–F6、运维 O1–O2、原型 R0–R4、app 阻塞项 A7–A12、admin dossier 编辑器 D5、backend B7；核销两则过期待决（设备归属冲突、binding_id 待实现）；新增待决：S3 硬件变体是否进 V0.3。 |
+| 2026-08-16 | xiaozhi-server | **Memory MCP 已挂载并切 `v0.9.6-b10`**（提交 `ae620da`）：server 同时加入 `xiaozhi-server_default` 与 `ai-pet-backend_default`；私有 URL `http://memory-mcp:8000/mcp`，token 复用 `business_api`。容器级验收通过：DNS、`tools/list` 三工具、`memory.search` 5ms/ok、错误 token 401 不重试；8002 HTTP 200、8000 端口开放。真机一次 `memory.search` 并入 X1。 |
