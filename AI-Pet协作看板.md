@@ -48,7 +48,7 @@
 | 转写旁路写入 | `POST /api/internal/chat/events` | ✅ 已实现（**当前真契约**：5 字段，`session_id`=字符串 UUID） | 🟡 已改为原生字符串 UUID 并随自建镜像 `v0.9.6-b2` 部署；待真机提交 user/assistant 两条事件验收 | 待验收 |
 | 外设状态快照 | `POST /api/internal/peripheral/events` | ✅ 已实现：单行全量覆盖写 | 🟡 已随 `v0.9.6-b4` 部署：成功的眼睛 MCP 调用映射 emotion/gaze/closed 并异步上报 | 待真机眼睛动作验收 |
 | 会话结束通知 | `POST /api/internal/chat/sessions/{id}/end` | ✅ 路由已注册 | 🟡 已改用连接原生字符串 UUID 并随 `v0.9.6-b2` 部署；待一次真实断开会话验收 | 待验收 |
-| Memory MCP 挂载 | `memory.search/add/forget`，超时 800ms~1.5s | 🟡 真实记忆库与 stdio MCP 工具已部署；待提供 streamable HTTP MCP 服务及更新契约 | ⏳ 负责在实时会话中挂载、调用、超时降级；待 HTTP MCP 契约/服务可用后实施 | 未开始 |
+| Memory MCP 挂载 | streamable HTTP MCP `/mcp`，`memory.search/add/forget`，超时 800ms~1.5s | ✅ 已部署 `memory-mcp` HTTP 服务：内部 Token 401、初始化及三工具清单均已验收；工具统一使用 `device_uid`，未映射公网端口 | ⏳ 待加入受控共享 Docker 网络并在实时会话挂载、调用、超时降级 | 后端服务端已验收；待小智挂载 |
 | device_id 对齐 | 小写冒号 MAC `device_uid`（如 `8c:fd:49:0c:a8:78`） | ✅ 已部署：`devices/seen` 以 MAC 建立资产，生成独立 app `binding_id` | 🟡 连接时已规范化 MAC 并异步调用 `devices/seen`，随 `v0.9.6-b2` 部署；待查 backend 资产记录验收 | 待验收 |
 | 鉴权 | `/api/internal/*` 走 `X-Internal-Token` | ✅ 已实现 | ✅ 已配置并随旁路请求发送；真实请求到达 backend | 已联通 |
 
@@ -190,9 +190,9 @@
 | **设备身份契约已定，待实现**：MAC=`device_uid`（小智硬件核心 ID）；后端 `devices.id` 为平台管理 ID；后端首见 MAC 时生成独立、不可猜测的 app `binding_id`，app 只用该 ID 认领。admin 不得调用用户 bind 或占用 `user_id`；管理端另设设备资产接口。契约已更新至 backend docs/06。 | app B2、admin 设备管理 | E1.1 待实现 |
 | **Memory MCP 传输方式**：会话 B 建议 streamable HTTP MCP（同机 127.0.0.1 直连）；backend memory-mcp 现为 stdio 骨架，需会话 A 评估改造量并**先改 docs/05 契约**再实现 | C3 Memory MCP（会话 B 挂载开发） | 待会话 A 定夺 |
 | **内置安全默认人设文案**：persona_pack 拉取失败的最终兜底 prompt 由谁供稿（建议产品/backend 出一版中性安全文案，会话 B 内置到配置）。**补充（用户拍板 2026-08-01）：该文案同时兼任"新设备未配置人设"的 onboarding 引导**（流程：设备激活→backend 无人设→引导人设陪聊→用户在 App/管理台配置→下轮会话生效） | 会话 B persona_pack 降级链 | 待会话 A/产品 |
-| **persona_pack "未配置"语义**：新设备在 backend 尚无人设档案时，pack API 返回 404 还是默认空 pack？需会话 A 在 docs/06 钉死（会话 B 倾向 404，清晰可判） | 会话 B persona_pack 降级链 | 待会话 A 定夺 |
+| **persona_pack "未配置"语义**：已定为 backend 返回 404；小智加载本地安全 onboarding 人设并继续会话，不将其作为重试故障。已写入 backend docs/06。 | 会话 B persona_pack 降级链 | ✅ 已定 |
 | 端口 8000 冲突：已定（backend web-api 用 8010，仅本机反代） | — | ✅ 已解决 |
-| **契约路径前缀不一致**：契约写 `/internal/*`，backend 实际挂载 `/api/internal/*`（openapi 证实）。请会话 A 确认正名并统一（改挂载或改 docs/06），会话 B 代码将按定稿写 | 会话 B V0.2 开发 | 待会话 A 确认 |
+| **契约路径前缀**：最终统一为 `/api/internal/*`；backend docs/04/06/07/10/11 与 xiaozhi docs/03/05 已清理遗留写法，服务代码无需双写兼容。 | 全部服务间调用 | ✅ 已定 |
 | 域名 + ICP 备案（Caddy 收 443、MQTT 8883 前提） | 双方联调 | 未开始 |
 | 旁路脱敏由谁执行（backend 落库前统一脱敏 = 当前决策） | 会话 B 实现旁路时 | 已定（docs/08） |
 | 上游 xiaozhi-esp32-server 钉 v0.9.6 | 会话 B | 已定（docs/08） |
@@ -293,6 +293,7 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-02 | ai-pet-backend | 本仓 `docs/09-部署进度与运维.md` 与 `docs/10-后端开发计划.md` 已同步（提交 `d2eb8c5`）：记录 LLM 成长链、记忆实库、角色档案上线事实，并将后续重点调整为记忆画像、人设问卷/预览、KB draft 闭环与运营监控。 |
 | 2026-08-15 | ai-pet-backend / xiaozhi-server | **C5 状态复核**：backend 提交 `85c05be` 的 `GET /api/internal/context/device` 已部署，内部鉴权真实设备请求 200；当前仅完成后端。小智服务须按看板配置私有 URL/token，按 `pet_default → persona_pack → dynamic_context` 单次合并最终 Prompt，并完成真机唤醒、日志及首轮语音验收；异常时仅降级动态上下文，不影响既有人设链路。 |
 | 2026-08-16 | ai-pet-backend / xiaozhi-server | **Memory MCP 职责确认**：后端已部署 memories 实库与 stdio 工具，下一步由 backend 提供并定稿 streamable HTTP MCP 契约；小智服务负责实时会话挂载、工具调用及 800ms~1.5s 超时降级。LLM 配置按用途分离：后端私有 `.env` 供异步摘要/候选记忆/人设成长 Worker，实时对话模型仍仅由小智服务私有模型配置管理；密钥不入仓或看板。 |
+| 2026-08-16 | ai-pet-backend / xiaozhi-server | **Memory MCP HTTP 服务已部署，契约已变更**：backend 提交 `5126fcb` 将 `memory-mcp` 改为受 `X-Internal-Token` 保护的 streamable HTTP `/mcp`，工具统一以 `device_uid` 调用；容器内验证无 Token 401、带 Token 初始化 200、三项工具均可列出，且未映射公网端口。`/api/internal/*` 路径与 persona 未配置 404/onboarding 降级语义已同步至两仓契约；待小智加入受控共享 Docker 网络并挂载。 |
 | 2026-08-02 | ai-pet-app | **原型核对后完成 C2 + D2 并部署**：记忆页接入用户端 memories 列表/搜索、手动新建、归档删除与 candidate 通过/忽略；日运/小记页接入 `daily_summary` analyses，兼容无结果等待态。`typecheck`、`build` 通过，ECS `:8081` 首页 200；未登录 memories/analyses 均预期 401。D3 导出与人设问卷仍因后端 501 阻塞。 |
 | 2026-08-02 | ai-pet-app | **C4 首页“我的星仔”已完成**：对当前选中设备读取 persona，展示星座、MBTI、知识库版本与跟随策略；切换设备重新请求，404 为“未设置人设”空态并保留设置入口。原型核对与后续计划已回写 app 文档；`typecheck`、`build` 通过，待真实账号设备完成受保护接口验收。 |
 | 2026-08-16 | xiaozhi-server | **C5 + MiniMax 思考隔离上线**：构建并切换 `xiaozhi-aipet-server:v0.9.6-b8`（b6 直跳 b8，b7 废弃）；`ThinkTagFilter` 跨 chunk 过滤（本地提交 `e93bb14`）+ `thinking:{type:disabled}` + direct_answer 兜底剥离，并补齐 `connection.py` 缺失的 dynamic_context 合入块；容器级验收通过（过滤器行为测试、直连 C5 200/7ms/真机 3 条、主机级 401/空降级复核）；智能体“测试1”主 LLM 切为 MiniMax-M2.5；仅剩真机验收。 |
