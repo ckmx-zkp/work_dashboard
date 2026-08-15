@@ -24,7 +24,7 @@
 | WebSocket 会话地址 | `ws://39.107.143.71:8000/xiaozhi/v1/`（OTA 应答自动下发，固件无需硬编码） |
 | 智控台 | `http://39.107.143.71:8002`（设备激活码在这里输入绑定） |
 | 部署版本 | 上游 v0.9.6 全模块（server + manager + MySQL + Redis） |
-| 当前模型链路 | ASR=本地 SenseVoiceSmall（免费）/ LLM=GLM-4.5-Flash（免费，备用 Kimi K2.7）/ TTS=EdgeTTS（免费） |
+| 当前模型链路 | ASR=豆包流式 2.0 / LLM=MiniMax-M2.5（备用 千帆/GLM-4.5-Flash/Kimi K2.7）/ TTS=火山双向流式·湾湾小何（备用 EdgeTTS）；**以 AI-Pet协作看板.md 模型链路行为准** |
 | 备用接入 | 旧测试机 47.108.114.17 上有一个停用的精简模式容器（已废弃，勿用） |
 
 ## 联调集成点状态（双方共同维护）
