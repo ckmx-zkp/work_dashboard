@@ -116,6 +116,7 @@
 - ✅ **“宠物否认自己有星座”已修复（2026-08-16，backend 侧）**：真机问“你是什么星座”总答“我是AI宠物”。根因：KB v2 片段全是第三人称教练视角 + `pet_default`“不编造人设”约束，模型拿不到身份事实。修复：backend `compile_profile` 在 KB 片段前固定注入身份行（“你的星座是天蝎座，MBTI 是 ENFP……”），提交 `8243e0d` 已上线（web-api 已重建），已验证 persona_pack 首条即身份行；小智侧 300 秒刷新自动生效，无需改仓。KB v2 片段的宠物视角重写已列入排期（见待决事项）。
 - ✅ **失败可观测性已上线（2026-08-16）**：构建并切换 `xiaozhi-aipet-server:v0.9.6-b9`（b8 基础上叠加）。新增 `core/utils/integration_log.py` 统一旁路日志（tag=BIZ）：persona_pack、chat events、session end、peripheral events、C5 context provider 均记录 `device_uid`、`session_id`、耗时、outcome（ok/retry/dropped/degraded）与降级原因；重试中间过程仅 debug 不刷屏；不记录对话正文、token、完整 Prompt；接口通用，后续 Memory MCP 直接复用。本地提交 `2ef6d07`（含另一会话并入的契约定稿 docs 提交 `e5d5de9`）。容器级验证通过：b9 启动无错误、容器内 `log_op` 自测输出正确单行。真机日志证据随 E2E 验收一起取。
 - ✅ **Memory MCP 已挂载（2026-08-16，`v0.9.6-b10`，提交 `ae620da`）**：小智 server 同时加入 `xiaozhi-server_default` 与 `ai-pet-backend_default`；私有配置 `memory_mcp.url=http://memory-mcp:8000/mcp`（token 复用 `business_api`，未写入仓库/智控台/看板）。容器级验收：DNS 解析 `memory-mcp`、`tools/list` 列出 `memory.search/add/forget`、`memory.search` 5ms/ok（真机 MAC，items=0）、错误 token 401 且不重试；BIZ 日志含工具名/耗时/`device_uid`/`session_id`，不含 token 或记忆正文。本机 8002 HTTP 200、8000 端口开放。真机对话调用一次 `memory.search` 仍待 X1。
+- 📋 **双机对聊房间（方案 B）归属已定（2026-08-18）**：由 **xiaozhi-server** 做实时会话桥（A 的助理文本注入 B 的会话 + 轮流锁）。backend **不**做实时桥（没有活 WS 会话）。E9/docs/11 的 BLE 社交是加好友，不是语音对聊。固件几乎不改。待拍板：配对入口、一轮几句。未开始实现，不插队 X1。
 
 ## 任务拆分（2026-08-16 · 原型第五次校准）
 
@@ -191,6 +192,7 @@
 |---|------|------|------|
 | X1 | 真机 E2E 验收（最高优先）：b8 三项回归（think 不播报 / C5 首轮上下文 / 星座身份行）+ 旁路五类落库 + S1–S5 体验回归 + b9 旁路日志（tag=BIZ）取证 + b10 真机一次 `memory.search`；可视化清单见 prototype `e2e-checklist.html` | 全部代码已部署 | 待真机 |
 | X2 | Memory MCP 挂载：compose 接入受控共享网络 + 私有 URL/token + 三工具白名单 + 超时降级 | 已随 `v0.9.6-b10` 部署并完成容器级验收；真机调用并入 X1 | 容器级完成，待真机 |
+| X3 | 双机对聊房间（方案 B）：两台已连 WS 的设备做会话桥 + 轮流锁；A 助理句作为 B 的用户句注入 | **归属本仓**（实时 ASR/LLM/TTS 编排）。backend 不做实时桥；E9 BLE 社交不覆盖本需求；固件几乎不改。待拍板配对入口与一轮句数。设计进本仓 docs，不进看板 | 待排期 |
 
 ### ESP32_XIAOZHI / 固件（`xiaozhi-esp32/`）
 
@@ -214,7 +216,7 @@
 
 ### 明确不进本轮（禁止当作当前可做）
 
-- 社交 / Feed / 排行榜 / 重型养成：E9 仅 docs/11 定稿，固件 BLE 未开发；启动前须隐私方案评审。
+- 社交 / Feed / 排行榜 / 重型养成：E9 仅 docs/11 定稿，固件 BLE 未开发；启动前须隐私方案评审。E9 ≠ 双机语音对聊房间（X3）；后者归属小智服务，另排期，不提前画成可用。
 - App 直连设备、实时语音、眼睛/舵机 MCP 控制：架构红线，App 只读设备状态。
 - 用问卷替代现有星座/MBTI 直选：问卷端点仍为 501。
 - 把未实现能力画成当前可用；原型与产品页必须区分已上线 / 等待后端 / 等待硬件。
@@ -306,6 +308,7 @@
 | **KB v2 片段宠物视角重写（v3）**：现有 28 条星座/MBTI KB 片段全是第三人称教练视角，导致模型无身份事实；需全部改写为宠物第一人称视角并重发布为 v3。属运营内容工作；backend 身份行注入（`8243e0d`）已先行兜底，不阻塞 | 人设真实感（admin/backend KB 运营） | 已排期，未开始 |
 | **dossier 用户可见/可编辑边界**：六字段（身份/背景/角色/目标/进化规则/关系）中哪些对 App 用户可见或可编辑、哪些仅作 Prompt 编译来源；原型 `my-pet.html` 暂按"关系 + 陪伴偏好可编辑、其余只读"假设 | app A1 我的星仔页 | 待产品拍板 |
 | **S3 硬件变体是否进 V0.3**：`hardware/` 原理图审核资料 + `pet_platform_config.h` 双平台矩阵 | 固件排期、BOM | 待产品拍板 |
+| **双机对聊房间（方案 B）**：实时桥归 xiaozhi-server；backend 不做实时编排。待拍板：配对入口（智控台 / 口头口令 / App）、一轮说几句、首版是否只做内存配对（不落库） | 会话 B（实现）/ 产品 | 归属已定，细节待拍板 |
 
 ## 进度日志
 
@@ -333,6 +336,15 @@
 | 2026-08-01 | xiaozhi-server | **V0.2 旁路模块上线**：`core/business_report.py`（队列+指数退避，4xx 丢弃）+ reportHandle 挂钩（user/assistant，独立于 chat_history_conf）+ close() 会话结束；契约已变更（docs/05：/api 前缀、session_id int64、device_uid）；自建镜像 `xiaozhi-aipet-server:v0.9.6-b1` 部署完成，容器内探针 422/401 通过；待真实对话 E2E |
 
 ## 跨会话消息（按时间倒序，读后可标 [已读]）
+
+### 2026-08-18 → 会话 B（xiaozhi-server）【双机对聊房间归属】
+
+用户要把「两台小智对聊」做成服务端房间（方案 B），不靠空气耦合。口头让两台互聊已失败：会话隔离，模型按一对一主人对话拒绝。
+
+- **本仓做**：两台已连 WS 的会话桥；A 的助理文本注入 B 当作用户文本；轮流锁（一方 TTS 未完另一方不说）；对聊期人设改成「你在和另一只宠物聊天」。
+- **backend 不做**：实时桥、音频、轮流。E9/docs/11 仍是 BLE 好友，不是对聊。若以后要 App 发起或持久化配对，再加契约；首版可用智控台或内存配对。
+- **固件**：几乎不改。
+- **不插队 X1**。设计细节进本仓 docs，不进看板。任务号 X3，状态待排期。
 
 ### 2026-08-01 → 会话 A（ai-pet-backend）【回执：人设域职责确认 + 会话 B 任务拆解】
 
@@ -416,3 +428,4 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-16 | prototype / 项目看板 | **任务拆分二次补齐**：补固件 F1–F6、运维 O1–O2、原型 R0–R4、app 阻塞项 A7–A12、admin dossier 编辑器 D5、backend B7；核销两则过期待决（设备归属冲突、binding_id 待实现）；新增待决：S3 硬件变体是否进 V0.3。 |
 | 2026-08-16 | xiaozhi-server | **Memory MCP 已挂载并切 `v0.9.6-b10`**（提交 `ae620da`）：server 同时加入 `xiaozhi-server_default` 与 `ai-pet-backend_default`；私有 URL `http://memory-mcp:8000/mcp`，token 复用 `business_api`。容器级验收通过：DNS、`tools/list` 三工具、`memory.search` 5ms/ok、错误 token 401 不重试；8002 HTTP 200、8000 端口开放。真机一次 `memory.search` 并入 X1。 |
 | 2026-08-17 | 工作区总仓 | **`ckmx-zkp/AI_pet` 已作为 Home_Work 多设备入口推送**：各子仓仍是独立远端（submodule 指针），未改 origin、未触发各仓 CI、不影响 ECS `git pull` 部署。另一台电脑 `git clone --recurse-submodules https://github.com/ckmx-zkp/AI_pet.git`；改代码进子仓再 push 该仓 origin。 |
+| 2026-08-18 | xiaozhi-server | **双机对聊房间（方案 B）归属已定**：由小智服务做实时会话桥（助理文本互注入 + 轮流锁）；backend 不负责实时桥；E9 BLE 社交不覆盖本需求；固件几乎不改。待拍板配对入口与一轮句数，未开始实现，不插队 X1。 |
