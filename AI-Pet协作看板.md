@@ -14,6 +14,7 @@
 
 | 仓库 | 路径 | 职责 | 当前开发会话 |
 |------|------|------|-------------|
+| **AI_pet（工作区总仓）** | `D:\Home_Work` | 多设备入口；子仓以 submodule 挂载。日常提交仍进各子仓 origin | 另一台电脑：`git clone --recurse-submodules https://github.com/ckmx-zkp/AI_pet.git` |
 | ai-pet-backend | `D:\Home_Work\ai-pet-backend` | 业务后端：用户/设备/KB/persona/记忆/MCP/worker | 会话 A |
 | xiaozhi-server | `D:\Home_Work\xiaozhi-server` | 实时语音后台（xinnan-tech 上游二开） | 会话 B |
 | ai-pet-admin | `D:\Home_Work\ai-pet-admin` | Web 管理台 | **Codex（会话 C）**，交接文档 `docs/05-开发交接-Codex.md` |
@@ -414,3 +415,4 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-16 | prototype / 项目看板 | **原型第五次校准 + 任务拆分**：prototype 仓推送 `d640f2b`——index 现状板块刷新至 08-16（admin 全貌、MiniMax 链路、b8/b9、dossier、仅剩 2 个 501），新增 `e2e-checklist.html` 真机验收墙与 `my-pet.html` 我的星仔原型；按校准结论完成前后端任务拆分，见本文件"任务拆分（2026-08-16）"节；新增待决：dossier 用户可见/可编辑边界。 |
 | 2026-08-16 | prototype / 项目看板 | **任务拆分二次补齐**：补固件 F1–F6、运维 O1–O2、原型 R0–R4、app 阻塞项 A7–A12、admin dossier 编辑器 D5、backend B7；核销两则过期待决（设备归属冲突、binding_id 待实现）；新增待决：S3 硬件变体是否进 V0.3。 |
 | 2026-08-16 | xiaozhi-server | **Memory MCP 已挂载并切 `v0.9.6-b10`**（提交 `ae620da`）：server 同时加入 `xiaozhi-server_default` 与 `ai-pet-backend_default`；私有 URL `http://memory-mcp:8000/mcp`，token 复用 `business_api`。容器级验收通过：DNS、`tools/list` 三工具、`memory.search` 5ms/ok、错误 token 401 不重试；8002 HTTP 200、8000 端口开放。真机一次 `memory.search` 并入 X1。 |
+| 2026-08-17 | 工作区总仓 | **`ckmx-zkp/AI_pet` 已作为 Home_Work 多设备入口推送**：各子仓仍是独立远端（submodule 指针），未改 origin、未触发各仓 CI、不影响 ECS `git pull` 部署。另一台电脑 `git clone --recurse-submodules https://github.com/ckmx-zkp/AI_pet.git`；改代码进子仓再 push 该仓 origin。 |
