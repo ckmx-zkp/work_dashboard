@@ -50,7 +50,7 @@
 | 外设状态快照 | `POST /api/internal/peripheral/events` | ✅ 已实现：单行全量覆盖写 | 🟡 已随 `v0.9.6-b4` 部署：成功的眼睛 MCP 调用映射 emotion/gaze/closed 并异步上报 | 待真机眼睛动作验收 |
 | 会话结束通知 | `POST /api/internal/chat/sessions/{id}/end` | ✅ 路由已注册 | 🟡 已改用连接原生字符串 UUID 并随 `v0.9.6-b2` 部署；待一次真实断开会话验收 | 待验收 |
 | Memory MCP 挂载 | streamable HTTP MCP `/mcp`，`memory.search/add/forget`，超时 800ms~1.5s | ✅ 已部署 `memory-mcp` HTTP 服务：内部 Token 401、初始化及三工具清单均已验收；工具统一使用 `device_uid`，未映射公网端口 | 🟡 已随 `v0.9.6-b10` 部署：加入 `ai-pet-backend_default`、私有 `http://memory-mcp:8000/mcp`、三工具白名单、1.2s 超时、4xx 不重试；容器级 list/search/401 已验 | 容器级已联通；待真机调用 |
-| device_id 对齐 | 小写冒号 MAC `device_uid`（如 `8c:fd:49:0c:a8:78`） | ✅ 已部署：`devices/seen` 以 MAC 建立资产，生成独立 app `binding_id` | ✅ 2026-08-18 旁路基址改为 `http://web-api:8000`（原 `host.docker.internal:8010` 被 UFW 丢弃导致 seen/events 全超时）；新机 `8c:fd:49:0c:b2:44` 已补建档，容器级 seen 200 | 容器级已通；待下次真机连接自动 seen |
+| device_id 对齐 | 小写冒号 MAC `device_uid`（如 `8c:fd:49:0c:a8:78`） | ✅ 已部署：`devices/seen` 以 MAC 建立资产，生成独立 app `binding_id` | ✅ 2026-08-18 `v0.9.6-b11`：智控台已绑定设备启动扫描 + 30s 复查自动 `devices/seen`；旁路基址 `http://web-api:8000`。现有 3 台已导入 | 容器级已通 |
 | 鉴权 | `/api/internal/*` 走 `X-Internal-Token` | ✅ 已实现 | ✅ 已配置并随旁路请求发送；真实请求到达 backend | 已联通 |
 
 状态值约定：`未开始 / 骨架 / 已实现 / 已联调`
@@ -118,6 +118,7 @@
 - ✅ **Memory MCP 已挂载（2026-08-16，`v0.9.6-b10`，提交 `ae620da`）**：小智 server 同时加入 `xiaozhi-server_default` 与 `ai-pet-backend_default`；私有配置 `memory_mcp.url=http://memory-mcp:8000/mcp`（token 复用 `business_api`，未写入仓库/智控台/看板）。容器级验收：DNS 解析 `memory-mcp`、`tools/list` 列出 `memory.search/add/forget`、`memory.search` 5ms/ok（真机 MAC，items=0）、错误 token 401 且不重试；BIZ 日志含工具名/耗时/`device_uid`/`session_id`，不含 token 或记忆正文。本机 8002 HTTP 200、8000 端口开放。真机对话调用一次 `memory.search` 仍待 X1。
 - 📋 **双机对聊房间（方案 B）归属已定（2026-08-18）**：由 **xiaozhi-server** 做实时会话桥（A 的助理文本注入 B 的会话 + 轮流锁）。backend **不**做实时桥（没有活 WS 会话）。E9/docs/11 的 BLE 社交是加好友，不是语音对聊。固件几乎不改。待拍板：配对入口、一轮几句。未开始实现，不插队 X1。
 - ⚠️ **旁路地址已纠正（2026-08-18）**：`business_api` / C5 从 `http://host.docker.internal:8010` 改为 `http://web-api:8000` 并重启 `xiaozhi-esp32-server`。原路径被 UFW 丢弃，seen/events/persona_pack/C5 全部 ConnectTimeout；Memory MCP 因走 `memory-mcp:8000` 未受影响。新机 `8c:fd:49:0c:b2:44` 已补建档（未认领）；08-17 夜间对话事件已超时丢弃，不可回放。
+- ✅ **智控台设备自动导入 backend（2026-08-18，`v0.9.6-b11`）**：启动即扫智控台已绑定 MAC 并 `devices/seen`，之后每 30 秒复查新绑定；本进程同一 MAC 只导一次。优先 manager-api `/config/bound-devices`（代码已加，web 官方镜像尚未换），当前回退读 `ai_device`。容器日志：旁路 `http://web-api:8000`，首轮 seen=3 imported=3。
 
 ## 任务拆分（2026-08-16 · 原型第五次校准）
 
@@ -336,6 +337,7 @@
 | 2026-08-01 | xiaozhi-server | 定时巡检上线（每 30min 探活+异常写看板）；首探发现：两内部接口已注册路由但仍是桩（pack 501 / events "not implemented"），且实际前缀为 `/api/internal/*`（契约写的 `/internal/*`，已挂待决请会话 A 统一） |
 | 2026-08-01 | xiaozhi-server | **V0.2 旁路模块上线**：`core/business_report.py`（队列+指数退避，4xx 丢弃）+ reportHandle 挂钩（user/assistant，独立于 chat_history_conf）+ close() 会话结束；契约已变更（docs/05：/api 前缀、session_id int64、device_uid）；自建镜像 `xiaozhi-aipet-server:v0.9.6-b1` 部署完成，容器内探针 422/401 通过；待真实对话 E2E |
 | 2026-08-18 | xiaozhi-server | 新机 `8c:fd:49:0c:b2:44` 智控台已绑定但 admin 查不到：`devices/seen` 走 `host.docker.internal:8010` 被 UFW 丢弃。已改 `business_api`/`context_providers` 为 `http://web-api:8000` 并重启小智；补建档 id=3 未认领；容器级 seen 200。昨晚对话事件已超时丢弃。 |
+| 2026-08-18 | xiaozhi-server | **智控台已绑定设备自动导入 backend**：上线 `v0.9.6-b11`（`console_device_sync`，启动+30s 复查）。现有 3 台已导入；之后智控台绑定无需等 WS。 |
 
 ## 跨会话消息（按时间倒序，读后可标 [已读]）
 
