@@ -74,7 +74,7 @@ flowchart LR
 
 **真实代码进度（核实 2026-08-18）**：
 
-- `main=4b2fc62` 与 `origin/main` 对齐，ECS 已部署该提交；迁移至 `0010_fun_quiz_and_natal`。
+- `main=b0c5323` 与 `origin/main` 对齐，ECS 已部署该提交；迁移至 `0011_owner_user_scoped`。主人档案按用户账号一份、多设备共享；问卷/趣味测试写主人，不再写宠物人设。
 - 账号、设备、`binding_id`、persona/dossier、脱敏历史、记忆、分析、外设、KB 运营、Memory MCP 和异步 Worker 均已部署。
 - E6.1 `memory_profile`、E2.1 问卷/preview、E7.1 反馈只建 draft、E8 同步 export + 保留清理 + `/admin/ops/metrics` 已上线；问卷/export 不再 501。
 - KB v3 已以 version++ 新行发布 12 星座 + 16 MBTI 第一人称片段；`follow_latest=true` 下次编译自动采用。
