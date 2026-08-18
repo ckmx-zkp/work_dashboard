@@ -17,7 +17,7 @@
 | **AI_pet（工作区总仓）** | `D:\Home_Work` | 多设备入口；子仓以 submodule 挂载。日常提交仍进各子仓 origin | 另一台电脑：`git clone --recurse-submodules https://github.com/ckmx-zkp/AI_pet.git` |
 | ai-pet-backend | `D:\Home_Work\ai-pet-backend` | 业务后端：用户/设备/KB/persona/记忆/MCP/worker | `main=ae1ddd8`，已部署 ECS；迁移 0012 相处关系；主人/宠物档案已分开 |
 | xiaozhi-server | `D:\Home_Work\xiaozhi-server` | 实时语音后台（xinnan-tech 上游二开） | `main=99aa353`，b13 已部署：无语音会话窗口 300 秒；等待 X1 剩余真机验收 |
-| ai-pet-admin | `D:\Home_Work\ai-pet-admin` | Web 管理台 | `main=efdd8cd`，与 origin 对齐；D1-D5 已部署，当前无未提交改动 |
+| ai-pet-admin | `D:\Home_Work\ai-pet-admin` | Web 管理台 | `main` 已推送 B5 扩展/B7/B8/D7；已部署 ECS:8080 |
 | ai-pet-app | `D:\Home_Work\ai-pet-app` | 用户端（手机 PWA + 桌面） | `main=94f8b6f`，已部署 `index-BOxyZSUr.js`；C7 宠物/用户性格拆分与页顶跳转已上线，A3 待 backend status 字段 |
 | ESP32_XIAOZHI | `D:\Home_Work\ESP32_XIAOZHI` | 母文档 + 固件 | `main=44b1c4d`；E11 主动播报架构设计稿已提交，尚无实现代码；F1 待开发 |
 | ai-pet-ops | `D:\Home_Work\ai-pet-ops` | 服务器只读监测与告警 | V0 骨架，未部署 |
@@ -87,6 +87,7 @@
 - 🟡 **M3 对话与记忆**：用户及管理端脱敏消息查询、用户/管理端 memories 列表与 candidate 审核、Memory MCP 实库均已部署；Admin 记忆审核页已接入。真实候选仍待 worker 持续产出与真机旁路验收。
 - 🟡 **M4 分析、外设与 KB 运营**：管理端与用户侧 analyses/peripheral 只读接口均已部署；`/admin/kb/*` 草稿、发布、反馈审核已部署，v2 人设 KB 已发布。Admin 分析已改为卡片，不再展示原始 JSON；外设持续上报与 worker 分析产出仍待真机验收。
 - ✅ **2026-08-18 体验改造已部署**：D1 分析卡片、D2 资产列表 20 条 offset 分页、D3 统一空态/错误/重试、D4 仓内文档回写、D5 dossier 保存提示「下次会话生效」。线上 `http://39.107.143.71:8080/` 新构建 200。
+- ✅ **2026-08-18 跟进 backend 主人/宠物拆分与 bond**：B5 分析卡片扩展 memory_profile（长期记忆画像）/relationship_update（相处关系变化）；新增 B7 运势核对只读 tab（`GET /admin/devices/{id}/fortune/daily`，owner 星座）；新增 B8 人设页展示只读相处关系 bond；新增 D7 运营指标页（`GET /admin/ops/metrics`，任务计数不含对话内容）。apply-persona-growth 因仍为用户端点，admin 侧继续标记阻塞待产品/backend 拍板是否开放。线上已重新构建部署，`/` 200。
 
 ### ai-pet-app（用户端）依赖快照（2026-08-18）
 
@@ -196,12 +197,14 @@
 | D4 | 仓内文档债：docs/02/03/04/06 回写已完成事实 | 无 | ✅ 已完成 |
 | D5 | 设备详情 dossier 六字段编辑器 + 「下次会话生效」提示 | Admin `PUT /devices/{id}/persona` 已上线 | ✅ 已部署 |
 | D6 | 播报测试按钮与状态展示 | backend docs/06 接口为暂定稿 | 阻塞：E11 架构统一、B10 与 X4 后再开发 |
+| D7 | 分析卡片扩展 memory_profile/relationship_update；运势核对只读 tab；人设页只读展示 bond；运营指标页 | 均无阻塞，跟进 backend 主人/宠物拆分与 E10/E6.1 | ✅ 已部署 |
 
 ### ai-pet-backend（业务后端）
 
 | # | 任务 | 说明 | 状态 |
 |---|------|------|------|
-| B13 | 宠物-主人相处关系：`bond` 一设备一份（情感伴侣/逆子/爱子/相爱相杀等）；会话结束+记忆变更推断回写；`GET /devices/{id}/profiles` 分开主人与宠物 | 契约已变更 docs/02/04/06 | ✅ 已部署（`ae1ddd8`，迁移 0012） |
+| B14 | 相处关系扩到 27 种 + `GET /relationship-kinds`；推断优先长期记忆，避免单次硬件闲聊改成陪伴伙伴 | 契约已变更 docs/02/06 | ✅ `ed2b707` 已推送 |
+| B13 | 宠物-主人相处关系：`bond` 一设备一份；会话结束+记忆变更推断回写；`GET /devices/{id}/profiles` 分开主人与宠物 | 契约已变更 docs/02/04/06 | ✅ 已部署（`ae1ddd8`，迁移 0012） |
 | B12 | 主人/宠物主体拆分：主人=账号一份、多设备共享；问卷与趣味测试写 `owner_profiles`；八字/星盘迁 user 级；日运 L1 按主人星座；persona_pack 注入主人片段且不改 7 字段 | 契约已变更 docs/02/06/11/12；App A10 问卷勿再当宠物人设 | ✅ 已部署（`b0c5323`，迁移 0011） |
 | B1 | E6.1 记忆画像：记忆变更入队 → LLM 产出 `memory_profile` 卡片 | app A9 前置 | ✅ 已部署（`5e7e851`） |
 | B2 | E2.1 人设问卷 + `persona/preview` 编译预览（MBTI 算型在 backend，dry-run 不改库） | app A10 / admin 预览前置 | ✅ 已部署（`5e7e851`） |
@@ -296,7 +299,8 @@
 2. **现有设备运营体验**：✅ 2026-08-18 已补筛选、真分页、统一空态/错误重试与验收提示。
 3. **记忆管理前端**：✅ 已部署列表/搜索/candidate 通过驳回。
 4. **角色档案编辑器**：✅ 人设 tab 已接入 dossier 六字段，保存提示「下一次会话生效」。
-5. **分析卡片化**：✅ 已部署；`daily_summary` / `persona_growth` 不再展示原始 JSON。
+5. **分析卡片化**：✅ 已部署；`daily_summary` / `persona_growth` / `memory_profile` / `relationship_update` 均已卡片化，不再展示原始 JSON。
+6. **运势核对与运营指标**：✅ D7 已部署；只读运势 tab（owner 星座）、人设页只读 bond 展示、`/admin/ops/metrics` 运营指标页均已上线。
 
 管理台现有未阻塞项已做完。导出、问卷/预览、记忆画像的 backend 前置均已解除；若进入管理端消费仍需单独排前端任务。运势/八字运营页尚无既定 Admin 需求。
 
@@ -352,6 +356,7 @@
 
 | 日期 | 仓库 | 事项 |
 |------|------|------|
+| 2026-08-18 | ai-pet-backend | **相处关系扩至 27 种**（`ed2b707`）：新增爱宠/家中幼崽/掌上明珠/技术搭子等；`GET /relationship-kinds`；推断优先长期记忆。s3box 此前被 7 种收成「陪伴伙伴」属种类不足。 |
 | 2026-08-18 | ai-pet-app | **C7 命名与跳转已部署**：页题改为「宠物性格」/「用户性格」/「趣味测试」；宠物性格页顶粘性跳转；20 题与主人生辰迁到 `/owner`，问卷改接 `GET/POST /owner`。提交 `94f8b6f`，公网 `index-BOxyZSUr.js`，8081 首页 200、`/api/auth/me` 401。 |
 | 2026-08-18 | ai-pet-backend | **契约已变更并已部署 `ae1ddd8`**：主人/宠物档案必须分开读；相处关系一设备一份（情感伴侣/逆子/爱子/相爱相杀等），会话结束与记忆变更可更新。`GET /devices/{id}/profiles`、`GET/PUT /relationship`。迁移 0012。App 应用 profiles 分开展示。 |
 | 2026-08-18 | ai-pet-backend | **契约已变更并已部署 `b0c5323`**：主人=用户账号一份、多设备共享。问卷/趣味测试写 `owner_profiles`，不再写宠物 `persona_profiles`；八字与星盘迁 `user_id`（迁移 0011）。新增 `GET/PUT /owner` 与 `/owner/questionnaire`。日运 L1 按主人星座。App A10 需改接主人档案。 |
@@ -383,7 +388,7 @@
 - **契约已变更**（docs/06）：`GET /devices/{id}/profiles` 一次返回 `{owner, pet, relationship}`。
 - 宠物：`GET /devices/{id}/persona`，`subject=pet`。
 - 主人：`GET /owner`，`subject=owner`。
-- 关系：`GET/PUT /devices/{id}/relationship`，`kind` ∈ 情感伴侣 / 逆子 / 爱子 / 相爱相杀 / 知己 / 陪伴伙伴 / 守护者。会话结束和记忆变更后 worker 会更新；App 也可直选。
+- 关系：`GET/PUT /devices/{id}/relationship`，种类见 `GET /relationship-kinds`（爱宠/家中幼崽/掌上明珠/情感伴侣/逆子/相爱相杀/技术搭子等）。会话结束和记忆变更后 worker 会更新；App 也可直选。
 - 请分开展示两份档案，关系不要写进宠物 MBTI/星座。
 
 ### 2026-08-18 → ai-pet-app【问卷/测试是主人，不是宠物】【已处理：`94f8b6f`】
@@ -535,3 +540,4 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-18 | ai-pet-app | **测验作答页排布已修（`bbff4d8`）**：选项改为圆点+文字同一行的可点选行，选中高亮；「返回列表」收到题卡右上角。公网 `index-OWBlx9O5.js`，首页 200。 |
 | 2026-08-18 | ai-pet-app | **结果独立页 + 海报配色/二维码 + 应用名「守护星」（`18a6928`）**：「看结果」跳 `/tests/result`；海报按结果换色（宜借运金红等）并带当前 PWA 地址二维码；登录/PWA/侧栏名称暂定守护星。公网 `index-B04-lGtY.js`，首页 200。 |
 | 2026-08-18 | ai-pet-app | **用户手测通过**：结果独立页、海报按结果配色、二维码扫码打开 PWA、应用名「守护星」已确认。代码已在 GitHub `ckmx-zkp/ai-pet-app-` 的 `main=18a6928`。 |
+| 2026-08-18 | ai-pet-admin | **跟进 backend 主人/宠物拆分与 bond 概念已部署**：B5 分析卡片扩展 memory_profile/relationship_update 两类只读卡片；新增 B7 运势核对只读 tab（owner 星座五维度 + 八字运势，不触发生成）；新增 B8 人设页只读展示相处关系 bond（kind/label/summary/来源/置信度）；新增 D7 运营指标页（`/admin/ops/metrics`，Agent Worker 任务 pending/failed 计数与近 24h 按 kind 分组，不含对话内容）；apply-persona-growth 管理端应用仍阻塞，需产品/backend 先拍板是否开放 admin 端点。构建通过并部署 ECS:8080，docs/03/04/06 已回写。 | |
