@@ -1,0 +1,23 @@
+AI-Pet协作看板.md
+  s_ada4240553a2f0::t_6a31904a63a28a 19,222,508
+AI-Pet固件联调看板.md
+  s_ada4240553a2f0::t_578f4fd770a47e 58,63,124
+AI-Pet项目全景与进度.md
+  s_ada4240553a2f0::t_4c33342af23dee 19,94,97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "a6340565fb55cf1f25d179363b0b7c5e96256642",
+  "prompts": {},
+  "sessions": {
+    "s_ada4240553a2f0": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a01302-988c-7402-9070-52b689d4c5ca",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kunpeng2.zhang <kunpeng2.zhang@ly.com>"
+    }
+  }
+}
