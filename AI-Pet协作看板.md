@@ -18,7 +18,7 @@
 | ai-pet-backend | `D:\Home_Work\ai-pet-backend` | 业务后端：用户/设备/KB/persona/记忆/MCP/worker | `main=ae1ddd8`，已部署 ECS；迁移 0012 相处关系；主人/宠物档案已分开 |
 | xiaozhi-server | `D:\Home_Work\xiaozhi-server` | 实时语音后台（xinnan-tech 上游二开） | `main=99aa353`，b13 已部署：无语音会话窗口 300 秒；等待 X1 剩余真机验收 |
 | ai-pet-admin | `D:\Home_Work\ai-pet-admin` | Web 管理台 | `main=efdd8cd`，与 origin 对齐；D1-D5 已部署，当前无未提交改动 |
-| ai-pet-app | `D:\Home_Work\ai-pet-app` | 用户端（手机 PWA + 桌面） | `main=35f297c`（功能 `ffd04ae`），与 origin 对齐并已部署 `index-BhrOz7WB.js`；A1/A8/A9/A10 与趣味测试/星盘已上线，A3 待 backend status 字段 |
+| ai-pet-app | `D:\Home_Work\ai-pet-app` | 用户端（手机 PWA + 桌面） | `main=94f8b6f`，已部署 `index-BOxyZSUr.js`；C7 宠物/用户性格拆分与页顶跳转已上线，A3 待 backend status 字段 |
 | ESP32_XIAOZHI | `D:\Home_Work\ESP32_XIAOZHI` | 母文档 + 固件 | `main=44b1c4d`；E11 主动播报架构设计稿已提交，尚无实现代码；F1 待开发 |
 | ai-pet-ops | `D:\Home_Work\ai-pet-ops` | 服务器只读监测与告警 | V0 骨架，未部署 |
 | prototype | `D:\Home_Work\prototype` | 产品/交互原型 | R0-R2 已交付，R3 待排期，R4 等 X1 |
@@ -178,11 +178,12 @@
 | A7 | 设备改名 / 解绑 UI | backend `PATCH`/`DELETE /devices/{id}` 已上线（name 1–128 字；DELETE 204 仅解除归属、历史保留可重绑）；首页行内改名 + 二次确认解绑；`d1dd70d` 已提交推送 | ✅ 已部署，待真实 API 验收 |
 | A8 | D3 数据导出页 | 我的页 `POST /export` 同步 JSON 摘要 + 本地下载；不含 MAC/生辰 | ✅ 已部署，待真实账号验收 |
 | A9 | 记忆画像页 | 记忆页顶卡读 `GET /analyses?kind=memory_profile` | ✅ 已部署，待真实数据验收 |
-| A10 | 人设问卷入口 | 人设页附加入口；`GET/POST /questionnaire`；不替代直选、不在客户端算 MBTI；preview 本轮不做 | ✅ 已部署，待真实账号验收 |
+| A10 | 人设问卷入口 | 已改接 `GET/POST /owner/questionnaire`，结果只写主人档案；独立页 `/owner` 标题「用户性格测试」，不再回填宠物性格 | ✅ 已部署 `94f8b6f` / `index-BOxyZSUr.js` |
 | A11 | PWA 安装引导 / HTTPS 正式发布 | 等 O1 域名与证书 | 阻塞 |
 | A12 | 桌面增强 Epic E（宽屏分栏、窗口记忆） | 不阻塞 V0.2 | 待排期 |
-| A13 | 每日运势卡片页：接 `GET /devices/{id}/fortune/daily`，展示星座五维度 + 八字运势 + `generating` 空态 | `d1dd70d` 已提交推送；未生成时字段 null + `generating:true`（后端懒入队）走「生成中」空态，404 引导先配人设 | ✅ 已部署，待真实账号验收生成链路 |
-| A14 | 主人八字录入：接 `GET/PUT /devices/{id}/bazi`，保存后引导查看日运 | `d1dd70d` 已提交推送；历法 solar/lunar + 出生日期 + 时辰可未知 + 出生地 + 性别；未录入 GET 404 为空表单，PUT 覆盖写并重生成当日 bazi_fortune；原始生辰边界与 HTTPS 未定 | ✅ 已部署；外部采集仍待隐私拍板/HTTPS |
+| A13 | 每日运势卡片页：接 `GET /devices/{id}/fortune/daily`，展示星座五维度 + 八字运势 + `generating` 空态 | `d1dd70d` 已提交推送；未生成时字段 null + `generating:true`（后端懒入队）走「生成中」空态，404 引导先去用户性格页设主人星座 | ✅ 已部署，待真实账号验收生成链路 |
+| A14 | 主人八字录入：接 `GET/PUT /devices/{id}/bazi`，保存后引导查看日运 | 已从宠物性格页迁到 `/owner`「主人生辰」；历法 solar/lunar + 出生日期 + 时辰可未知 + 出生地 + 性别；未录入 GET 404 为空表单 | ✅ 已随 `94f8b6f` 迁页；外部采集仍待隐私拍板/HTTPS |
+| A16 | 宠物性格 / 用户性格命名拆分 + 页顶跳转 | 页题不再写「人设设置」；宠物性格页顶粘性跳转（页内锚点 + 用户性格测试/趣味测试/星仔档案） | ✅ 已部署 `94f8b6f` / `index-BOxyZSUr.js` |
 | A15 | 主动播报配置页 | 产品配置需求已明确；backend docs/06 接口为暂定稿 | 阻塞：先统一 E11 传输架构并部署 B10 |
 
 ### ai-pet-admin（管理台前端）
@@ -351,6 +352,7 @@
 
 | 日期 | 仓库 | 事项 |
 |------|------|------|
+| 2026-08-18 | ai-pet-app | **C7 命名与跳转已部署**：页题改为「宠物性格」/「用户性格」/「趣味测试」；宠物性格页顶粘性跳转；20 题与主人生辰迁到 `/owner`，问卷改接 `GET/POST /owner`。提交 `94f8b6f`，公网 `index-BOxyZSUr.js`，8081 首页 200、`/api/auth/me` 401。 |
 | 2026-08-18 | ai-pet-backend | **契约已变更并已部署 `ae1ddd8`**：主人/宠物档案必须分开读；相处关系一设备一份（情感伴侣/逆子/爱子/相爱相杀等），会话结束与记忆变更可更新。`GET /devices/{id}/profiles`、`GET/PUT /relationship`。迁移 0012。App 应用 profiles 分开展示。 |
 | 2026-08-18 | ai-pet-backend | **契约已变更并已部署 `b0c5323`**：主人=用户账号一份、多设备共享。问卷/趣味测试写 `owner_profiles`，不再写宠物 `persona_profiles`；八字与星盘迁 `user_id`（迁移 0011）。新增 `GET/PUT /owner` 与 `/owner/questionnaire`。日运 L1 按主人星座。App A10 需改接主人档案。 |
 | 2026-07-26 ~ 08-01 | ai-pet-backend | 技术栈决策（docs/08）、脚手架完成并首推 GitHub（ckmx-zkp/ai-pet-backend） |
@@ -384,7 +386,7 @@
 - 关系：`GET/PUT /devices/{id}/relationship`，`kind` ∈ 情感伴侣 / 逆子 / 爱子 / 相爱相杀 / 知己 / 陪伴伙伴 / 守护者。会话结束和记忆变更后 worker 会更新；App 也可直选。
 - 请分开展示两份档案，关系不要写进宠物 MBTI/星座。
 
-### 2026-08-18 → ai-pet-app【问卷/测试是主人，不是宠物】
+### 2026-08-18 → ai-pet-app【问卷/测试是主人，不是宠物】【已处理：`94f8b6f`】
 
 - **来源**：用户拍板「主人和用户账号唯一，一个主人可挂多个设备」。
 - **契约已变更**（backend docs/06）：
