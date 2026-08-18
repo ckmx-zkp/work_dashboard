@@ -1,0 +1,27 @@
+AI-Pet协作看板.md
+  s_ada4240553a2f0::t_37bcfcfb32a937 223,509
+  s_ada4240553a2f0::t_fa1baedf93f710 103,114-115,137,146,153-154,172-173,178-181,184-185,212-213
+  s_ada4240553a2f0::t_5ccd4916fce56d 19-21
+AI-Pet项目全景与进度.md
+  s_ada4240553a2f0::t_fa1baedf93f710 17,23,77,81-82,87,129,158
+  s_ada4240553a2f0::t_5ccd4916fce56d 16,114,128
+  s_ada4240553a2f0::t_37bcfcfb32a937 19,95,98
+AI-Pet固件联调看板.md
+  s_ada4240553a2f0::t_37bcfcfb32a937 58,63,124
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "3451dafa5c6135942bdcb59fa1d03a4e14fda9c8",
+  "prompts": {},
+  "sessions": {
+    "s_ada4240553a2f0": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a01302-988c-7402-9070-52b689d4c5ca",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kunpeng2.zhang <kunpeng2.zhang@ly.com>"
+    }
+  }
+}
