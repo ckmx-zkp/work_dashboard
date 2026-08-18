@@ -15,18 +15,20 @@
 | 仓库 | 路径 | 职责 | 当前开发会话 |
 |------|------|------|-------------|
 | **AI_pet（工作区总仓）** | `D:\Home_Work` | 多设备入口；子仓以 submodule 挂载。日常提交仍进各子仓 origin | 另一台电脑：`git clone --recurse-submodules https://github.com/ckmx-zkp/AI_pet.git` |
-| ai-pet-backend | `D:\Home_Work\ai-pet-backend` | 业务后端：用户/设备/KB/persona/记忆/MCP/worker | 会话 A |
-| xiaozhi-server | `D:\Home_Work\xiaozhi-server` | 实时语音后台（xinnan-tech 上游二开） | 会话 B |
-| ai-pet-admin | `D:\Home_Work\ai-pet-admin` | Web 管理台 | **Codex（会话 C）**，交接文档 `docs/05-开发交接-Codex.md` |
-| ai-pet-app | `D:\Home_Work\ai-pet-app` | 用户端（手机 PWA + 桌面，Vue3+Vite+TS strict） | Kimi（本会话） |
-| ESP32_XIAOZHI | `D:\Home_Work\ESP32_XIAOZHI` | 母文档 + 固件 | 参考 |
+| ai-pet-backend | `D:\Home_Work\ai-pet-backend` | 业务后端：用户/设备/KB/persona/记忆/MCP/worker | `main=ef063ad`，干净且与 origin 对齐；ECS 运行 `3a94d8a`，B9 已部署但联网检索触发有 Bug |
+| xiaozhi-server | `D:\Home_Work\xiaozhi-server` | 实时语音后台（xinnan-tech 上游二开） | b12 已部署，等待 X1 剩余真机验收 |
+| ai-pet-admin | `D:\Home_Work\ai-pet-admin` | Web 管理台 | D1-D5 已部署，当前无未提交改动 |
+| ai-pet-app | `D:\Home_Work\ai-pet-app` | 用户端（手机 PWA + 桌面） | `main=6ab6a97`，干净且与 origin 对齐；A2/A6/A7/A13/A14 已提交，但公网仍加载旧资产，待重新部署和真实账号验收 |
+| ESP32_XIAOZHI | `D:\Home_Work\ESP32_XIAOZHI` | 母文档 + 固件 | F1 待开发；新增未提交 E11 主动播报架构稿，尚无代码 |
+| ai-pet-ops | `D:\Home_Work\ai-pet-ops` | 服务器只读监测与告警 | V0 骨架，未部署 |
+| prototype | `D:\Home_Work\prototype` | 产品/交互原型 | R0-R2 已交付，R3 待排期，R4 等 X1 |
 
 ## 部署环境
 
 | 项 | 值 |
 |----|-----|
 | 服务器 | 阿里云北京 ECS `39.107.143.71`（8C16G/148G，Ubuntu 22.04） |
-| SSH | 本地 `ssh aliyun-aipet`（密钥已配，仅密钥登录） |
+| SSH | `ssh -i ~/.ssh/id_ed25519_aipet root@39.107.143.71`（密钥文件已存在，仅密钥登录；本机 ssh config 无 `aliyun-aipet` 别名，勿再用旧写法） |
 | 部署目录 | backend：`/opt/ai-pet/ai-pet-backend`；admin：`/opt/ai-pet/ai-pet-admin`；xiaozhi-server：`/opt/xiaozhi-server` |
 | 密钥位置 | 服务器 `/opt/ai-pet/ai-pet-backend/.env`（POSTGRES_PASSWORD / JWT_SECRET_KEY / INTERNAL_SERVICE_TOKEN） |
 | 对外端口 | 22/443 + 8883(MQTTS，预留) + 8000/8002/8003=xiaozhi-server + 8080=admin Web + **80=协作看板展示页（Basic Auth）**；8010=backend web-api 仅供本机反代（UFW 未放行） |
@@ -39,18 +41,18 @@
 | 版本 | 上游 v0.9.6 全模块（server + manager-web + MySQL + Redis，官方镜像） |
 | 端口 | 8000=设备 WebSocket；8002=智控台(manager-web/api，OTA 也在这：`/xiaozhi/ota/`)；8003=视觉/HTTP |
 | 代码 | 源码快照在 GitHub `ckmx-zkp/aipet-xiaozhi-server-`（钉 v0.9.6，无 fork 关联） |
-| 状态 | ✅ 已上线：4 容器正常 + 安全组/ufw 已放 8000/8002/8003，公网验证通过；`server.fronted_url`/`server.ota` 已指向 `http://39.107.143.71:8002(/xiaozhi/ota/)`；模型密钥未配（智控台配，无需改代码） |
+| 状态 | ✅ 4 容器与公网端口正常；语音镜像 `xiaozhi-aipet-server:v0.9.6-b12`；LLM=MiniMax-M2.5、ASR=豆包流式 2.0、TTS=火山双向流式，密钥仅在服务器私有配置 |
 
 ## 集成点状态（双方共同维护）
 
 | 集成点 | 契约 | backend 侧 | xiaozhi-server 侧 | 联调 |
 |--------|------|-----------|-------------------|------|
-| persona_pack 拉取 | `GET /api/internal/devices/{uid}/persona_pack` | ✅ 已部署（E2）：固定 7 字段；未配置人设返回 404 | 🟡 已随 `v0.9.6-b6` 部署：固定基础行为库 `pet_default` + 连接首次拉取/默认 300 秒刷新、缓存/onboarding 降级、pack 变化时 Prompt/`default_emotion` 更新 | 待真机人设变更验收 |
-| 转写旁路写入 | `POST /api/internal/chat/events` | ✅ 已实现（**当前真契约**：5 字段，`session_id`=字符串 UUID） | 🟡 已改为原生字符串 UUID 并随自建镜像 `v0.9.6-b2` 部署；待真机提交 user/assistant 两条事件验收 | 待验收 |
-| 外设状态快照 | `POST /api/internal/peripheral/events` | ✅ 已实现：单行全量覆盖写 | 🟡 已随 `v0.9.6-b4` 部署：成功的眼睛 MCP 调用映射 emotion/gaze/closed 并异步上报 | 待真机眼睛动作验收 |
-| 会话结束通知 | `POST /api/internal/chat/sessions/{id}/end` | ✅ 路由已注册 | 🟡 已改用连接原生字符串 UUID 并随 `v0.9.6-b2` 部署；待一次真实断开会话验收 | 待验收 |
-| Memory MCP 挂载 | streamable HTTP MCP `/mcp`，`memory.search/add/forget`，超时 800ms~1.5s | ✅ 已部署 `memory-mcp` HTTP 服务：内部 Token 401、初始化及三工具清单均已验收；工具统一使用 `device_uid`，未映射公网端口 | 🟡 已随 `v0.9.6-b10` 部署：加入 `ai-pet-backend_default`、私有 `http://memory-mcp:8000/mcp`、三工具白名单、1.2s 超时、4xx 不重试；容器级 list/search/401 已验 | 容器级已联通；待真机调用 |
-| device_id 对齐 | 小写冒号 MAC `device_uid`（如 `8c:fd:49:0c:a8:78`） | ✅ 已部署：`devices/seen` 以 MAC 建立资产，生成独立 app `binding_id` | ✅ 2026-08-18 `v0.9.6-b11`：智控台已绑定设备启动扫描 + 30s 复查自动 `devices/seen`；旁路基址 `http://web-api:8000`。现有 3 台已导入 | 容器级已通 |
+| persona_pack 拉取 | `GET /api/internal/devices/{uid}/persona_pack` | ✅ 已部署（E2/E10）：固定 7 字段；未配置人设返回 404；当日内容由 backend 注入 | 🟡 b6 起支持首次拉取/300 秒刷新/缓存/onboarding；S7 身份与 C5 已真机通过 | 待真机验证人设修改后的刷新生效 |
+| 转写旁路写入 | `POST /api/internal/chat/events` | ✅ 已部署：5 字段，`session_id`=字符串 UUID | 🟡 b12 已部署严格 FIFO 与有界重试 | 待真机 user/assistant 两类落库证据 |
+| 外设状态快照 | `POST /api/internal/peripheral/events` | ✅ 已部署：单行全量覆盖写 | 🟡 b12 已部署单项/批量眼睛工具快照上报 | 待真机五工具与 backend 落库证据 |
+| 会话结束通知 | `POST /api/internal/chat/sessions/{id}/end` | ✅ 已部署并触发异步任务 | 🟡 b12 已纳入严格 FIFO，使用原生字符串 UUID | 待真实断开与任务入队证据 |
+| Memory MCP 挂载 | streamable HTTP MCP `/mcp`，三工具白名单 | ✅ HTTP 服务、401、初始化和工具清单已验收 | 🟡 b10 挂载、b12 合并 persona 检索提示；容器级已验收 | 待真机一次 `memory.search` |
+| device_id 对齐 | 小写冒号 MAC `device_uid` | ✅ `devices/seen` 建资产并生成 `binding_id` | ✅ b11 启动扫描 + 30 秒复查智控台已绑定设备；旁路走 `web-api:8000`，现有 3 台已导入 | 容器级已通；待真机事件链证据 |
 | 鉴权 | `/api/internal/*` 走 `X-Internal-Token` | ✅ 已实现 | ✅ 已配置并随旁路请求发送；真实请求到达 backend | 已联通 |
 
 状态值约定：`未开始 / 骨架 / 已实现 / 已联调`
@@ -58,6 +60,8 @@
 ## 双方当前进度摘要
 
 ### ai-pet-backend（会话 A 维护）
+
+
 - ✅ Epic A1 脚手架：FastAPI monorepo（web-api / memory-mcp / agent-worker / persona-compiler），CI 全绿
 - ✅ Alembic 初始迁移：14 业务表 + agent_tasks 队列表
 - ✅ **2026-08-01 首次部署完成**：5 容器全部 Up（web-api @8010、memory-mcp、agent-worker、pg16、redis），迁移已执行（15 表），healthz/401 验证通过，详见 `docs/09-部署进度与运维.md`
@@ -66,8 +70,12 @@
 - ✅ **E1.1 已部署**：新增 `binding_id` 迁移；小智 `devices/seen` 首见生成绑定 ID；app `/devices/bind` 改按绑定 ID 认领；admin 调用用户 bind 返回 403。
 - ✅ **E2 已部署**：KB 种子（四元素、12 星座、16 型 MBTI）；用户 persona GET/PUT；内部 persona_pack 固定 7 字段。问卷、KB 管理与发布仍不属于本项。
 - ✅ **E4 已部署**：`GET /devices/{id}/messages` 按设备/时间窗分页读取脱敏内容；`DELETE` 必须带时间窗并写审计日志。
+- ✅ **E10 已部署（2026-08-18）**：提交 `ff3b2d4` + 文档 `2a13d2a`；迁移 `0008_daily_fortune` 已执行，八字与每日运势用户接口、两类 Worker 任务及 persona_pack 当日内容注入均已上线。`FORTUNE_SEARCH_ENABLED=false`，当前明确为非实时检索；待真实账号验收生成链路。
+- ⚠️ **E10.3 已部署（ECS 运行 `3a94d8a`）**：每日 05:00 后预生成、东八区切日、greeting 昨日回退、admin 运势只读接口已上线，ruff/mypy/pytest 92 全绿；真实 MiniMax M3 整合 prompt 未触发 `web_search`，任务会延迟重试且不静默降级，待修复并重跑当日 L1。
 
 ### ai-pet-admin（Codex / 会话 C 维护）
+
+
 - ✅ **M1+B1 完成**：Vue 3 + Vite + Element Plus + Pinia + axios 工程；注册/登录、JWT 本地保持、401 跳登录、侧边栏主布局，以及设备绑定、列表、详情、改名、解绑闭环均已实现，生产构建通过。
 - ✅ auth 联调依赖验证：线上 `healthz` 与测试账号登录均返回 200。
 - ✅ ECS HTTP 部署完成：Nginx 容器监听 `8080`，`/api/*` 同源反代到本机 backend `8010`；首页/SPA 路由 200，`/api/auth/me` 未登录返回 401，链路正常。
@@ -76,11 +84,11 @@
 - ✅ B1.1 已部署：已撤除管理台用户 `/devices/bind` 入口，页面明确设备认领由用户端以 `binding_id` 完成；当前仅保留当前账号设备查看，管理端资产接口现已由 backend 提供，待前端改接。
 - ✅ 管理端设备资产/诊断接口已部署：`/api/admin/devices` 资产分页/详情、绑定码轮换、管理端人设、脱敏历史、外设快照和分析结果只读均可用；`GET /api/admin/devices/lookup?device_uid={MAC/SN}` 可精确读取当前 `binding_id`，不暴露或写入用户归属。
 - 🟡 **M2 人设设置**：用户侧与管理端人设页面、`GET/PUT` 接口均已部署；12 星座、16 型 MBTI 均可保存。未认领设备管理端写入返回 409；xiaozhi 侧仍待接入同一领域的内部 `persona_pack`。
-- 🟡 **M3 对话与记忆**：用户及管理端脱敏消息查询、用户/管理端 memories 列表与 candidate 审核、Memory MCP 实库均已部署；Admin/App 前端记忆页面待接入，真实候选等待 LLM worker 配置后产出。
-- 🟡 **M4 分析、外设与 KB 运营**：管理端与用户侧 analyses/peripheral 只读接口均已部署；`/admin/kb/*` 草稿、发布、反馈审核已部署，v2 人设 KB 已发布；外设持续上报与 worker 分析产出仍未完成。
-- ⏭ **admin 下一批改造顺序**：知识库运营前端（接 `/admin/kb/*`）→ 记忆管理/审核（待后端 memories 实现）→ 分析结果的空态、任务状态与筛选体验；资产、人设、历史、外设读取已可继续维护和验收。
+- 🟡 **M3 对话与记忆**：用户及管理端脱敏消息查询、用户/管理端 memories 列表与 candidate 审核、Memory MCP 实库均已部署；Admin 记忆审核页已接入。真实候选仍待 worker 持续产出与真机旁路验收。
+- 🟡 **M4 分析、外设与 KB 运营**：管理端与用户侧 analyses/peripheral 只读接口均已部署；`/admin/kb/*` 草稿、发布、反馈审核已部署，v2 人设 KB 已发布。Admin 分析已改为卡片，不再展示原始 JSON；外设持续上报与 worker 分析产出仍待真机验收。
+- ✅ **2026-08-18 体验改造已部署**：D1 分析卡片、D2 资产列表 20 条 offset 分页、D3 统一空态/错误/重试、D4 仓内文档回写、D5 dossier 保存提示「下次会话生效」。线上 `http://39.107.143.71:8080/` 新构建 200。
 
-### ai-pet-app（用户端）依赖快照（2026-08-02）
+### ai-pet-app（用户端）依赖快照（2026-08-18）
 
 **原则**：app 运行时只调用 backend 的公开用户 API，**不依赖 admin 才能运行**。admin 是运营/资产管理端；它的唯一直接前置是不得再占用用户设备归属，必须先完成 E1.1 的资产接口改造。
 
@@ -89,9 +97,10 @@
 | B2.1/B2.2 设备认领、列表、详情、多设备切换 | E1.1 `binding_id` 生成/认领及用户设备列表已部署 | admin 不占用 `devices.user_id` | ✅ 已接入并部署：认领后自动设为当前设备，首页可列表、切换并持久化当前设备 |
 | B3 配网引导 | 不依赖 backend/admin 用户 API | 不依赖 admin | 依赖固件/小智的实际配网能力与图文流程 |
 | C1 人设设置、C4 首页人设摘要 | E2 人设读写、已发布的星座/MBTI 种子、`persona_pack` 实际可用并完成联调 | admin 的 KB 发布是后续运营能力，不是 app 保存人设的运行时依赖 | ✅ app C1、C4 已接入并部署；C4 按当前设备读取 persona，404 为可恢复空态 |
-| C2 记忆管理 | memories CRUD/approve/reject、Memory MCP 实库 | admin 的审核/运营页面是协作配套，不是 app 运行时依赖 | ✅ 后端用户端 memories CRUD、候选通过/驳回及 Memory MCP 实库已部署；App 尚未消费，可立即开发 |
+| C2 记忆管理 | memories CRUD/approve/reject、Memory MCP 实库 | admin 的审核/运营页面是协作配套，不是 app 运行时依赖 | ✅ App 已接入并部署记忆列表/搜索、新建、归档及候选审核；真实候选仍依赖持续对话数据 |
 | C3 历史浏览 | E4 messages 查询/删除已部署 | 无运行时依赖 | ✅ app 已接入并部署；待真实用户消息数据验收 |
 | D1 外设状态、D2 日运/小记、D3 数据导出 | peripheral/analyses 用户读取已部署；日运依赖 chat events、会话结束和 worker；export 端点已存在 | admin 的分析/KB 运营页面不阻塞 app 只读展示 | ✅ D1、D2 已接入并部署；后端已有真实 `daily_summary` 产出，待用户端实际账号验收；⛔ D3 `/export` 仍为 501，不可开发真实导出 |
+| A7 设备改名/解绑、D5 成长建议、D6 运势卡、D7 主人八字 | backend `PATCH`/`DELETE /devices/{id}`、`analyses?kind=persona_growth` + `apply-persona-growth`、E10 `fortune/daily` 与 `GET/PUT /devices/{id}/bazi` 均已部署 | 无运行时依赖 | ✅ 代码已由 `d1dd70d` 接入并推送；2026-08-18 公网复核仍加载旧资产 `index-Da5xQLPI.js`，待重新部署后真实账号验收 |
 | F1/F2 发布与安装 | 无业务 API 新前置；需完成端到端验收 | 无 | 还需域名与 HTTPS；当前 8081 HTTP 仅适合内测 |
 
 ### 原型核对（2026-08-02）
@@ -106,6 +115,8 @@
 | 人设问卷 | ⛔ `POST /devices/{id}/persona/questionnaire` 当前为 501 | 保持现有星座/MBTI 四维表单，不接问卷端点 |
 
 ### xiaozhi-server（会话 B 维护）
+
+
 - ✅ 上游 v0.9.6 源码钉版并首推 GitHub（ckmx-zkp/aipet-xiaozhi-server-）
 - ✅ 全模块部署到 39.107.143.71 `/opt/xiaozhi-server`（4 容器正常；安全组+ufw 已放 8000/8002/8003；MySQL 弱密码已换）
 - ✅ 修复三处部署坑：OTA 下发占位域名（`server.fronted_url`/`server.ota`/`server.websocket` 已指向公网地址）、`server.auth_key` 与 `server.secret` 不一致（真机连不上的隐患）
@@ -115,10 +126,10 @@
 - ✅ **C5 + MiniMax 思考隔离已上线（2026-08-16）**：构建并切换 `xiaozhi-aipet-server:v0.9.6-b8`（线上由 b6 直跳 b8，b7 废弃）。内容：跨 chunk `<think>` 状态机过滤（`ThinkTagFilter`，本地提交 `e93bb14`）、MiniMax `thinking:{type:disabled}` 双保险、direct_answer 兜底剥离；并补齐服务器源码树 `connection.py` 此前缺失的 dynamic_context 合入块（否则 b7 即使上线 C5 也不会进 Prompt）。容器级验收通过：容器启动正常、容器内过滤器行为测试通过、容器内直连 C5 `GET /api/internal/context/device` 200/7ms/真机 3 条上下文；主机级复核：已认领真机 data 非空、未知设备空、无 token 401。仅剩真机验收。
 - ✅ **“宠物否认自己有星座”已修复（2026-08-16，backend 侧）**：真机问“你是什么星座”总答“我是AI宠物”。根因：KB v2 片段全是第三人称教练视角 + `pet_default`“不编造人设”约束，模型拿不到身份事实。修复：backend `compile_profile` 在 KB 片段前固定注入身份行（“你的星座是天蝎座，MBTI 是 ENFP……”），提交 `8243e0d` 已上线（web-api 已重建），已验证 persona_pack 首条即身份行；小智侧 300 秒刷新自动生效，无需改仓。KB v2 片段的宠物视角重写已列入排期（见待决事项）。
 - ✅ **失败可观测性已上线（2026-08-16）**：构建并切换 `xiaozhi-aipet-server:v0.9.6-b9`（b8 基础上叠加）。新增 `core/utils/integration_log.py` 统一旁路日志（tag=BIZ）：persona_pack、chat events、session end、peripheral events、C5 context provider 均记录 `device_uid`、`session_id`、耗时、outcome（ok/retry/dropped/degraded）与降级原因；重试中间过程仅 debug 不刷屏；不记录对话正文、token、完整 Prompt；接口通用，后续 Memory MCP 直接复用。本地提交 `2ef6d07`（含另一会话并入的契约定稿 docs 提交 `e5d5de9`）。容器级验证通过：b9 启动无错误、容器内 `log_op` 自测输出正确单行。真机日志证据随 E2E 验收一起取。
-- ✅ **Memory MCP 已挂载（2026-08-16，`v0.9.6-b10`，提交 `ae620da`）**：小智 server 同时加入 `xiaozhi-server_default` 与 `ai-pet-backend_default`；私有配置 `memory_mcp.url=http://memory-mcp:8000/mcp`（token 复用 `business_api`，未写入仓库/智控台/看板）。容器级验收：DNS 解析 `memory-mcp`、`tools/list` 列出 `memory.search/add/forget`、`memory.search` 5ms/ok（真机 MAC，items=0）、错误 token 401 且不重试；BIZ 日志含工具名/耗时/`device_uid`/`session_id`，不含 token 或记忆正文。本机 8002 HTTP 200、8000 端口开放。真机对话调用一次 `memory.search` 仍待 X1。
-- 📋 **双机对聊房间（方案 B）归属已定（2026-08-18）**：由 **xiaozhi-server** 做实时会话桥（A 的助理文本注入 B 的会话 + 轮流锁）。backend **不**做实时桥（没有活 WS 会话）。E9/docs/11 的 BLE 社交是加好友，不是语音对聊。固件几乎不改。待拍板：配对入口、一轮几句。未开始实现，不插队 X1。
-- ⚠️ **旁路地址已纠正（2026-08-18）**：`business_api` / C5 从 `http://host.docker.internal:8010` 改为 `http://web-api:8000` 并重启 `xiaozhi-esp32-server`。原路径被 UFW 丢弃，seen/events/persona_pack/C5 全部 ConnectTimeout；Memory MCP 因走 `memory-mcp:8000` 未受影响。新机 `8c:fd:49:0c:b2:44` 已补建档（未认领）；08-17 夜间对话事件已超时丢弃，不可回放。
-- ✅ **智控台设备自动导入 backend（2026-08-18，`v0.9.6-b11`）**：启动即扫智控台已绑定 MAC 并 `devices/seen`，之后每 30 秒复查新绑定；本进程同一 MAC 只导一次。优先 manager-api `/config/bound-devices`（代码已加，web 官方镜像尚未换），当前回退读 `ai_device`。容器日志：旁路 `http://web-api:8000`，首轮 seen=3 imported=3。
+- ✅ **Memory MCP 已挂载（2026-08-16，`v0.9.6-b10`，提交 `ae620da`）**：小智 server 同时加入 `xiaozhi-server_default` 与 `ai-pet-backend_default`；私有配置仅在服务器。容器级 `tools/list`、`memory.search` 和错误 token 401 已验收；真机调用仍待 X1。
+- ✅ **b12 集成可靠性修复已部署（2026-08-18）**：`f6ba94f` 已与 `origin/main` 对齐；业务旁路严格 FIFO、多工具眼睛快照/休息后处理、`memory.search` 合并 persona 检索提示均通过容器级定向验收。S7 三项真机已通过，X1 仅剩旁路五类、S1-S5、BIZ 日志与一次真实 `memory.search`。
+- ✅ **b11 智控台设备自动导入已部署**：启动扫描并每 30 秒复查，旁路/C5 基址统一为 `http://web-api:8000`；现有 3 台已导入。旧 `host.docker.internal:8010` 路径被 UFW 丢弃期间的事件已丢失且不可回放。
+- 📋 **双机对聊房间（方案 B）归属已定**：实时桥归 xiaozhi-server，backend 不做实时桥，固件几乎不改；尚未实现，待拍板配对入口和单轮句数，不插队 X1。
 
 ## 任务拆分（2026-08-16 · 原型第五次校准）
 
@@ -132,12 +143,17 @@
 |---|---|---|
 | P0 | 真机 E2E 验收（b8/b9、旁路五类、S1–S5） | xiaozhi-server + 固件联调 |
 | P0 | Memory MCP 真机调用一次 `memory.search` | xiaozhi-server（容器级已完成） |
-| P1 | 接口已上线、前端未消费：我的星仔 / 成长建议 / 人设第四态 / 管理台分析卡片与 dossier 编辑 | ai-pet-app、ai-pet-admin |
+| P0 | App 重新部署 `d1dd70d` 并核验新构建 hash；当前公网仍是旧资产，之后再做 A2/A7/A13/A14 真实账号验收 | ai-pet-app |
+| P3 | App 遗留小项：① PersonaView `save()` 整体覆盖 overrides 为仅 `{taboo}`，会冲掉已应用的成长建议 overrides（产品/后端口径待决）；② PersonaView 重复 onMounted 致人设加载两遍（顺手清理） | ai-pet-app |
+| P1 | B9 E10.3 已部署；修复 MiniMax M3 在真实整合 prompt 下未触发 `web_search`，重跑当日 L1 并验收 | ai-pet-backend |
+| P1 | E10 真实账号验收：运势 `generating`→结果、八字保存与 persona 当日内容 | ai-pet-backend + ai-pet-app |
+| P1 | E11 主动播报先统一传输架构：已连接语音 WS 轮询 vs 空闲设备 MQTTS 控制通道 | backend + xiaozhi + 固件 + 运维 |
 | P1 | 日运页真实数据验收 | ai-pet-app |
+| P1 | 固件 OTA 分区腾挪（先于第二只眼） | ESP32 固件 |
 | P2 | backend 下一 Epic：E6.1 → E2.1 → E7.1 → E8 | ai-pet-backend |
-| P2 | 固件 OTA 分区腾挪（先于第二只眼） | ESP32 固件 |
-| P3 | 域名 + ICP + HTTPS/WSS | 运维 / 产品 |
-| 阻塞 | 配网引导、导出、问卷预览、记忆画像页、社交 | 见各表，不得提前画成可用 |
+| P2 | Ops 采集器本地完善、Prototype R3、KB v3 内容改写 | ai-pet-ops + prototype + backend/admin |
+| P3 | 域名 + ICP + HTTPS/WSS/MQTTS | 运维 / 产品 |
+| 阻塞 | 配网引导、导出、问卷预览、记忆画像页、社交、E11 主动播报实现 | 见各表，不得提前画成可用 |
 
 ### prototype（产品评审，不写生产代码）
 
@@ -154,27 +170,31 @@
 | # | 任务 | 依赖 / 说明 | 状态 |
 |---|------|-------------|------|
 | A1 | 「我的星仔」角色档案页（原型 `my-pet.html` 已出稿）：dossier 六字段用户可读版，关系 + 陪伴偏好可编辑，身份/背景/角色/目标/进化规则只读；保存提示「下次实体对话生效」 | GET/PUT persona dossier 已上线；**开工前待产品拍板字段可见边界（见待决事项）** | 待开发 |
-| A2 | 成长建议卡：`kind=persona_growth` 建议/证据/置信度卡片 + `apply-persona-growth` 二次确认 | 接口已上线 | 待开发 |
-| A3 | 人设生效第四态「已验证生效」（P3 三态扩展） | 无新接口；与验收墙状态联动 | 待开发 |
+| A2 | 成长建议卡：`kind=persona_growth` 建议/证据/置信度卡片 + `apply-persona-growth` 二次确认 | 接口已上线；实际端点为 `POST /devices/{id}/analyses/{aid}/apply-persona-growth`（带 analysis id）；`d1dd70d` 已提交推送 | 代码完成，待重新部署和真实 API 验收 |
+| A3 | 人设生效第四态「已验证生效」（P3 三态扩展） | 2026-08-18 核实 backend 无此能力：`PersonaProfile` 无 status 列、persona 响应无状态字段、全仓无相关枚举；已记入 app docs/06「暂不具备实现条件」 | ⏸ 搁置：待 backend 先补状态字段与枚举，前端再做徽章 |
 | A4 | B3 配网引导页 | 等固件 F3 最终配网步骤与素材 | 阻塞 |
-| A5 | 日运页真实数据验收：worker 修复后已重跑产出 8 条 `daily_summary`，App 刷新即可验证 | 2026-08-16 已具备条件 | 待验收 |
-| A6 | 文档债顺手回写：docs/06 的 D4 勾选、`PersonaView` 种子注释、docs/03 P2 的 binding_id 契约 | 无 | 顺手 |
-| A7 | 设备改名 / 解绑 UI | backend `PATCH`/`DELETE /devices/{id}` 已上线 | 待开发 |
+| A5 | 日运页真实数据验收：worker 修复后已重跑产出 8 条 `daily_summary`，App 刷新即可验证 | 链路已验证（8081 首页 200、analyses/fortune 未登录 401）；真实数据验收需用户登录账号 + 已绑定设备 | 待用户手测验收 |
+| A6 | 文档债顺手回写：docs/06 勾选 D4（实质在 B2.2 落地）与 B2 父项、F2 加注 manifest/SW 已配置待 HTTPS；docs/03 修正 P3 人设页与 P2 绑定页口径 | 已随 `d1dd70d` 提交推送 | ✅ 已完成 |
+| A7 | 设备改名 / 解绑 UI | backend `PATCH`/`DELETE /devices/{id}` 已上线（name 1–128 字；DELETE 204 仅解除归属、历史保留可重绑）；首页行内改名 + 二次确认解绑；`d1dd70d` 已提交推送 | 代码完成，待重新部署和真实 API 验收 |
 | A8 | D3 数据导出页 | 等 B4 解除 `/export` 501 | 阻塞 |
 | A9 | 记忆画像页 | 等 B1 E6.1 | 阻塞 |
 | A10 | 人设问卷入口 | 等 B2；不得在客户端算 MBTI | 阻塞 |
 | A11 | PWA 安装引导 / HTTPS 正式发布 | 等 O1 域名与证书 | 阻塞 |
 | A12 | 桌面增强 Epic E（宽屏分栏、窗口记忆） | 不阻塞 V0.2 | 待排期 |
+| A13 | 每日运势卡片页：接 `GET /devices/{id}/fortune/daily`，展示星座五维度 + 八字运势 + `generating` 空态 | `d1dd70d` 已提交推送；未生成时字段 null + `generating:true`（后端懒入队）走「生成中」空态，404 引导先配人设 | 代码完成，待重新部署和真实账号验收生成链路 |
+| A14 | 主人八字录入：接 `GET/PUT /devices/{id}/bazi`，保存后引导查看日运 | `d1dd70d` 已提交推送；历法 solar/lunar + 出生日期 + 时辰可未知 + 出生地 + 性别；未录入 GET 404 为空表单，PUT 覆盖写并重生成当日 bazi_fortune；原始生辰边界与 HTTPS 未定 | 代码完成；待重新部署，外部采集仍待拍板/HTTPS |
+| A15 | 主动播报配置页 | 产品配置需求已明确；backend docs/06 接口为暂定稿 | 阻塞：先统一 E11 传输架构并部署 B10 |
 
 ### ai-pet-admin（管理台前端）
 
 | # | 任务 | 依赖 / 说明 | 状态 |
 |---|------|-------------|------|
-| D1 | 分析卡片化：`daily_summary` 摘要/主题/情绪/跟进建议与 `persona_growth` 建议/证据/置信度渲染为卡片，禁止直接展示原始 JSON（现为 `<pre>`） | 接口已上线 | 待开发 |
-| D2 | 设备资产列表真分页（现 `limit=100` 一次拉取，无分页控件） | 无 | 待开发 |
-| D3 | 空态/加载/错误统一规范 | 无 | 待开发 |
-| D4 | 仓内文档债：docs/02/03/04/06 回写已完成事实（停在 08-02 早晨） | 无 | 顺手 |
-| D5 | 设备详情 dossier 六字段编辑器 | Admin `PUT /devices/{id}/persona` 已上线；提示「下一次会话生效」 | 待开发 |
+| D1 | 分析卡片化：`daily_summary` 摘要/主题/情绪/跟进建议与 `persona_growth` 建议/证据/置信度渲染为卡片，禁止直接展示原始 JSON | 接口已上线 | ✅ 已部署 |
+| D2 | 设备资产列表真分页（`limit=20` + offset） | 无 | ✅ 已部署 |
+| D3 | 空态/加载/错误统一规范 | 无 | ✅ 已部署 |
+| D4 | 仓内文档债：docs/02/03/04/06 回写已完成事实 | 无 | ✅ 已完成 |
+| D5 | 设备详情 dossier 六字段编辑器 + 「下次会话生效」提示 | Admin `PUT /devices/{id}/persona` 已上线 | ✅ 已部署 |
+| D6 | 播报测试按钮与状态展示 | backend docs/06 接口为暂定稿 | 阻塞：E11 架构统一、B10 与 X4 后再开发 |
 
 ### ai-pet-backend（业务后端）
 
@@ -187,14 +207,20 @@
 | B5 | KB v3：28 条星座/MBTI 片段改写为宠物第一人称视角并重发布（运营内容工作，身份行已兜底） | 不阻塞 | 已排期未开始 |
 | B6 | `memory_mcp` 注释与实库事实不符等文档清理 | 顺手 | 顺手 |
 | B7 | 与 E8 一并定：`daily_summary` 生成时机、失败可见性、重试策略与数据保留期限 | 待产品/会话 A | 待拍板 |
+| B8 | E10 每日运势与个性化内容：三表迁移（`daily_sign_fortunes`/`device_daily_contents`/`owner_bazi_profiles`）、`daily_sign_fortune`（LLM 联网检索→12 星座×事业/财运/学业/情感）与 `daily_device_content`（greeting+八字运势）worker 任务、`GET/PUT /devices/{id}/bazi` 与 `GET /devices/{id}/fortune/daily`、persona_pack 注入当日内容（契约不变） | 产品 2026-08-18 新需求；设计 docs/12，契约已登记 docs/02/06，docs/10 排期紧随 E6.1 | ✅ 已部署（`ff3b2d4`，迁移 0008 已执行；app 可联调 A13/A14） |
+| B9 | E10.3 运势增强：MiniMax M3 联网整合搜索、东八区切日、每日定时预生成、greeting 昨日回退 | 已部署（`3a94d8a`）：调度/回退/切日/admin 只读端点均上线，92 测试全绿；新增依赖 tzdata | ⚠️ 联网检索真实链路待修复：真实 prompt 下 M3 未调 web_search（响应无检索块），任务按设计延迟重试不静默降级；修复方向=提示词强制/tool_choice |
+| B10 | E11 主动播报 backend 消息/配置/API | backend docs/13 假设设备保持语音 WS，由小智轮询；固件新架构稿指出空闲时 WS 已关闭，建议 MQTTS 唤醒 | 架构阻塞：暂不实现，先统一跨仓契约 |
 
 ### xiaozhi-server（语音后台）
 
 | # | 任务 | 说明 | 状态 |
 |---|------|------|------|
-| X1 | 真机 E2E 验收（最高优先）：b8 三项回归（think 不播报 / C5 首轮上下文 / 星座身份行）+ 旁路五类落库 + S1–S5 体验回归 + b9 旁路日志（tag=BIZ）取证 + b10 真机一次 `memory.search`；可视化清单见 prototype `e2e-checklist.html` | 全部代码已部署 | 待真机 |
+| X1 | 真机 E2E 验收（最高优先）：b8 三项回归（think 不播报 / C5 首轮上下文 / 星座与 MBTI 身份）已由用户真机验证；剩余旁路五类落库 + S1–S5 体验回归 + b9 旁路日志（tag=BIZ）取证 + b10 真机一次 `memory.search`；可视化清单见 prototype `e2e-checklist.html` | 全部代码已部署 | 部分通过，剩余项待真机 |
 | X2 | Memory MCP 挂载：compose 接入受控共享网络 + 私有 URL/token + 三工具白名单 + 超时降级 | 已随 `v0.9.6-b10` 部署并完成容器级验收；真机调用并入 X1 | 容器级完成，待真机 |
-| X3 | 双机对聊房间（方案 B）：两台已连 WS 的设备做会话桥 + 轮流锁；A 助理句作为 B 的用户句注入 | **归属本仓**（实时 ASR/LLM/TTS 编排）。backend 不做实时桥；E9 BLE 社交不覆盖本需求；固件几乎不改。待拍板配对入口与一轮句数。设计进本仓 docs，不进看板 | 待排期 |
+| X3 | 双机对聊房间（方案 B）：两台已连 WS 的设备做会话桥 + 轮流锁；A 助理句作为 B 的用户句注入 | 归属 xiaozhi-server；backend 不做实时桥，固件几乎不改；待拍板配对入口和一轮句数 | 待排期，不插队 X1 |
+| X6 | 集成可靠性修复：旁路严格 FIFO、多工具眼睛快照/休息后处理、Memory MCP 自动合并 persona 检索提示 | 2026-08-18 已构建并部署 `xiaozhi-aipet-server:v0.9.6-b12`；容器级定向验收通过 | 已部署，待并入 X1 真机回归 |
+| X4 | E11 主动播报下行通道 | 轮询仅覆盖语音 WS 已连接设备；空闲远程唤醒需独立控制通道 | 阻塞：等待 E11 传输架构拍板 |
+| X5 | E11 开机首句/指定文本 TTS | 依赖 X4；现 backend docs/13 与固件架构稿尚未统一 | 阻塞：等待 X4 架构与契约 |
 
 ### ESP32_XIAOZHI / 固件（`xiaozhi-esp32/`）
 
@@ -206,6 +232,7 @@
 | F4 | WakeNet 误唤醒阈值 | 端侧问题，待用户拍板；服务端勿当 ASR/LLM bug | 待拍板 |
 | F5 | PetBehaviorController + WS2812 + 双舵机 | V0.3 体验层；`main/pet/` 类型层尚未提交接线 | 待排期 |
 | F6 | K230 UART 视觉 | V0.3+ | 待排期 |
+| F7 | E11 主动播报控制面 Spike | 固件新增未跟踪设计稿建议独立 MQTTS + 按需语音 WS；尚未改代码 | 架构阻塞：等传输方案、域名/TLS/broker |
 
 固件联调细节仍写 `AI-Pet固件联调看板.md`，此处只记跨仓归属。
 
@@ -218,16 +245,16 @@
 
 ### 明确不进本轮（禁止当作当前可做）
 
-- 社交 / Feed / 排行榜 / 重型养成：E9 仅 docs/11 定稿，固件 BLE 未开发；启动前须隐私方案评审。E9 ≠ 双机语音对聊房间（X3）；后者归属小智服务，另排期，不提前画成可用。
+- 社交 / Feed / 排行榜 / 重型养成：E9 仅 docs/11 定稿，固件 BLE 未开发；启动前须隐私方案评审。E9 不等于双机语音对聊房间（X3）；后者归 xiaozhi-server，另行排期。
 - App 直连设备、实时语音、眼睛/舵机 MCP 控制：架构红线，App 只读设备状态。
 - 用问卷替代现有星座/MBTI 直选：问卷端点仍为 501。
 - 把未实现能力画成当前可用；原型与产品页必须区分已上线 / 等待后端 / 等待硬件。
 
-## 当前协作建议（2026-08-02，覆盖下方历史优先级）
+## 当前协作建议（2026-08-18，覆盖下方历史优先级）
 
 ### xiaozhi-server 仍需实现 / 验收
 
-1. **真机 E2E 验收（最高优先）**：用真实设备依次证明 `devices/seen` 生成/更新资产、修改人设后 `persona_pack` 被拉取并改变下一会话 Prompt/默认表情、每轮 user/assistant 事件落入 backend、断开会话触发 `daily_summary` 入队、一次眼睛动作写入外设快照、问设备“你是什么星座”应自然承认天蝎座（身份行修复后的回归项）。
+1. **真机 E2E 验收（最高优先）**：S7 的 think 隔离、C5 首轮上下文、星座与 MBTI 身份已通过。剩余需用真实设备证明 `devices/seen`、user/assistant 事件、session end、眼睛外设快照五类旁路落库，并完成 S1-S5、BIZ 日志取证及一次真实 `memory.search`。
 2. **失败可观测性（已完成，2026-08-16 随 `v0.9.6-b9` 上线）**：统一旁路日志（tag=BIZ）已为各旁路请求输出不含对话原文的状态码/outcome（ok/retry/dropped/degraded）、重试次数、`device_uid`、`session_id`、耗时与降级原因；确认 4xx 丢弃、5xx 有界重试且绝不阻塞语音/TTS；待真机 E2E 验收时取真机日志证据。
 3. **Memory MCP 挂载（容器级已完成，2026-08-16，`v0.9.6-b10` / `ae620da`）**：小智 server 已加入 `ai-pet-backend_default`；私有 URL 为 `http://memory-mcp:8000/mcp`；三工具已挂到实时会话；超时 1.2s、4xx 不重试、5xx/网络有界重试、失败降级无记忆。容器级 `tools/list` 与 `memory.search` 已通。剩余：真机对话成功调用一次 `memory.search` 并取 BIZ 日志（并入 X1）。
 
@@ -238,7 +265,7 @@
 
 **部署状态**：backend 提交 `85c05be` 已上线 `GET /api/internal/context/device`，真实设备带内部鉴权请求返回 HTTP 200。响应采用上游要求的 `{"code":0,"data":[...]}` 包装；未知/未认领/无数据空成功降级。
 
-**当前结论**：C5 后端能力已完成并部署；小智侧已于 2026-08-16 随 `v0.9.6-b8` 完成私有配置、最终 Prompt 单次合并（并补齐 dynamic_context 合入块）与容器级验收；C5 端到端**仅剩真机验收**：唤醒不播报 think、首轮响应体现上下文、backend 宕机时 0.5s 降级且不阻塞首轮语音。
+**当前结论**：C5 后端能力和小智侧最终 Prompt 合并均已部署。2026-08-18 真机已确认 think 不播报、首轮响应体现 C5、身份事实正确；仅剩 backend 故障时的快速降级演练可作为可靠性补充项。
 
 **小智下一步（按顺序执行）**：
 
@@ -260,22 +287,24 @@
 
 ### 已实现、可由 admin 继续开发
 
-1. **知识库运营前端**：直接接已部署的 `/api/admin/kb/zodiac`、`/mbti`、发布和反馈审核端点；支持草稿编辑、审核后发布、版本与状态筛选。
-2. **现有设备运营体验**：围绕资产、绑定码、人设、脱敏历史、外设、分析增加筛选、空态、任务状态展示与验收提示，不需要等待小智新接口。
-3. **记忆管理前端**：直接接已部署的用户/管理端 memories 列表、编辑、归档、candidate 通过/驳回接口；候选数据将在 LLM worker 配置后出现。
-4. **角色档案编辑器（新增、可立即开发）**：在现有人设页接入 `dossier` 的身份、背景、角色、目标、进化规则、关系六字段；保存走既有 Admin `PUT /api/admin/devices/{id}/persona`，并提示“下一次会话生效”。
-5. **分析卡片化（新增、可立即开发）**：把 `daily_summary` 的摘要/主题/情绪/跟进建议，以及 `persona_growth` 的建议、证据、置信度渲染为卡片；禁止直接展示原始 JSON。
+1. **知识库运营前端**：✅ 已部署草稿编辑、发布与反馈审核。
+2. **现有设备运营体验**：✅ 2026-08-18 已补筛选、真分页、统一空态/错误重试与验收提示。
+3. **记忆管理前端**：✅ 已部署列表/搜索/candidate 通过驳回。
+4. **角色档案编辑器**：✅ 人设 tab 已接入 dossier 六字段，保存提示「下一次会话生效」。
+5. **分析卡片化**：✅ 已部署；`daily_summary` / `persona_growth` 不再展示原始 JSON。
 
-### 已实现、可由 app 继续开发
+管理台未阻塞项已做完。仍阻塞：导出（`/export` 501）、问卷/预览（E2.1）、记忆画像（E6.1）、运势/八字运营页（E10 + 产品拍板）。
 
-1. **外设状态页**：✅ app 已接入并部署 `GET /api/devices/{id}/peripheral`，展示最近快照、空态与手动刷新；待真机眼睛事件上报后完成真实数据验收。
-2. **分析与日运页**：先接 `GET /api/devices/{id}/analyses` 和导出接口，展示“暂无数据/等待夜间总结”；等 worker 有产出后无需重做接口层。
-3. **人设初始化体验**：在现有 GET/PUT 人设基础上补完整 12 星座、16 MBTI、愿望→`overrides` 映射、跳过默认值及“下次会话生效”的提示。
-4. **记忆页可直接开发**：接已有 memories CRUD/审核接口；LLM 未配置期间仅显示手工记忆或空态。
-5. **我的星仔（新增、可立即开发）**：复用用户 `GET/PUT /api/devices/{id}/persona` 的 `dossier` 字段，展示可读角色档案；用户可编辑“关系”和互动偏好，基础身份/背景可在首版先只读。
-6. **今日小记与成长建议（新增、可立即开发）**：接 `GET /api/devices/{id}/analyses?kind=daily_summary` 与 `kind=persona_growth`，以卡片展示，建议应用时调用 `POST /api/devices/{id}/analyses/{aid}/apply-persona-growth`。
+### ai-pet-app 当前可继续事项
 
-## 开发优先级（2026-08-01 会话 B 提议，待会话 A 确认）
+1. **已部署、待真实数据验收**：记忆、历史、外设、`daily_summary` 小记与多设备切换。
+2. **A2/A7/A13/A14 代码已提交、线上未生效**：成长建议、改名/解绑、运势卡、八字录入及文档回写已由 `d1dd70d`（+ AGENTS.md `6ab6a97`）提交推送；2026-08-18 公网复核仍加载旧资产 `index-Da5xQLPI.js`，其中不含新功能文案，需重新部署。
+3. **下一步不是继续堆功能**：用真实账号 + 已绑定设备验收 A2/A7/A13/A14 与 E10 生成链路；A14 在隐私边界和 HTTPS 明确前不得对外采集。
+4. **技术已就绪但产品/发布受限**：A14 八字录入接口已部署，原始生辰可见/删除边界待拍板，HTTPS 前不得对外采集。
+5. **遗留小项（低优先级）**：① PersonaView `save()` 整体覆盖 overrides 为仅 `{taboo}`，会冲掉已应用的成长建议 overrides（口径待决）；② PersonaView 重复 onMounted 致人设加载两遍。
+6. **仍阻塞/搁置**：A1 dossier 用户边界、A3 生效第四态（已核实后端无 status 字段，需 backend 先补）、A4 配网素材、A8 导出 501、A9 记忆画像、A10 问卷、A11 HTTPS/PWA。
+
+## 历史开发优先级（2026-08-01，已由上方 2026-08-18 任务顺序覆盖）
 
 > 核心依据：设备已在真实对话，backend 每晚一天实现旁路就多丢一天语料；同时 admin/app 在等用户侧 API。
 > 与 backend docs/10 的 E1~E8 排期不冲突，此处强调联调视角的先后。
@@ -310,7 +339,11 @@
 | **KB v2 片段宠物视角重写（v3）**：现有 28 条星座/MBTI KB 片段全是第三人称教练视角，导致模型无身份事实；需全部改写为宠物第一人称视角并重发布为 v3。属运营内容工作；backend 身份行注入（`8243e0d`）已先行兜底，不阻塞 | 人设真实感（admin/backend KB 运营） | 已排期，未开始 |
 | **dossier 用户可见/可编辑边界**：六字段（身份/背景/角色/目标/进化规则/关系）中哪些对 App 用户可见或可编辑、哪些仅作 Prompt 编译来源；原型 `my-pet.html` 暂按"关系 + 陪伴偏好可编辑、其余只读"假设 | app A1 我的星仔页 | 待产品拍板 |
 | **S3 硬件变体是否进 V0.3**：`hardware/` 原理图审核资料 + `pet_platform_config.h` 双平台矩阵 | 固件排期、BOM | 待产品拍板 |
-| **双机对聊房间（方案 B）**：实时桥归 xiaozhi-server；backend 不做实时编排。待拍板：配对入口（智控台 / 口头口令 / App）、一轮说几句、首版是否只做内存配对（不落库） | 会话 B（实现）/ 产品 | 归属已定，细节待拍板 |
+| **双机对聊房间（方案 B）**：实时桥归 xiaozhi-server，backend 不做实时编排；待拍板配对入口（智控台 / 口头口令 / App）、一轮句数、首版是否只做内存配对 | xiaozhi-server X3 / 产品 | 归属已定，细节待拍板 |
+| **E10 LLM 联网搜索源**：每日星座运势内容由 LLM 联网检索生成；MiniMax/千帆是否自带联网，或接独立搜索 API（新密钥走服务器私有 .env）；无搜索源时降级为纯 LLM 生成并标注"非实时检索" | backend B8 内容质量 | ✅ 已定（2026-08-18）：MiniMax 联网检索，B9 实现 |
+| **八字数据可见边界**：原始生辰是否回显用户本人、admin 是否可见（docs/12 建议：均否，只回显已录入状态）；纳入导出与删除范围 | app A14、admin | 待产品拍板（建议与 dossier 边界一起） |
+| **播报默认发送窗口**：主动播报默认时段建议 08:00–21:00 东八区，app 可改；休息/闭眼态是否允许 care 类轻播报 | app A15、小智 X4 | 待产品拍板（在架构统一后生效） |
+| **E11 主动播报传输架构**：backend docs/13 采用“设备语音 WS 在线时小智轮询”；固件新稿采用“独立 MQTTS 控制通道唤醒空闲设备，再按需建立语音 WS”。前者不能满足 WS 已关闭时的远程主动开口，后者增加 broker/TLS/固件常驻连接 | B10、X4/X5、A15、D6、固件 F7、运维 O1/O2 | **待用户/架构拍板；未统一前禁止实现** |
 
 ## 进度日志
 
@@ -336,19 +369,22 @@
 | 2026-08-01 | xiaozhi-server | 配置基线回写（docs/08，脱敏）；V0.2 任务拆解完成并回执会话 A（旁路复用上游 report 机制、persona_pack 挂钩点勘察、Memory MCP 建议 HTTP 传输）；新增 2 项待决（MCP 传输方式、安全默认人设文案） |
 | 2026-08-01 | xiaozhi-server | 定时巡检上线（每 30min 探活+异常写看板）；首探发现：两内部接口已注册路由但仍是桩（pack 501 / events "not implemented"），且实际前缀为 `/api/internal/*`（契约写的 `/internal/*`，已挂待决请会话 A 统一） |
 | 2026-08-01 | xiaozhi-server | **V0.2 旁路模块上线**：`core/business_report.py`（队列+指数退避，4xx 丢弃）+ reportHandle 挂钩（user/assistant，独立于 chat_history_conf）+ close() 会话结束；契约已变更（docs/05：/api 前缀、session_id int64、device_uid）；自建镜像 `xiaozhi-aipet-server:v0.9.6-b1` 部署完成，容器内探针 422/401 通过；待真实对话 E2E |
-| 2026-08-18 | xiaozhi-server | 新机 `8c:fd:49:0c:b2:44` 智控台已绑定但 admin 查不到：`devices/seen` 走 `host.docker.internal:8010` 被 UFW 丢弃。已改 `business_api`/`context_providers` 为 `http://web-api:8000` 并重启小智；补建档 id=3 未认领；容器级 seen 200。昨晚对话事件已超时丢弃。 |
-| 2026-08-18 | xiaozhi-server | **智控台已绑定设备自动导入 backend**：上线 `v0.9.6-b11`（`console_device_sync`，启动+30s 复查）。现有 3 台已导入；之后智控台绑定无需等 WS。 |
 
 ## 跨会话消息（按时间倒序，读后可标 [已读]）
 
-### 2026-08-18 → 会话 B（xiaozhi-server）【双机对聊房间归属】
+### 2026-08-18 → backend / xiaozhi / 固件 / app / admin【E10.3 已部署有 Bug；E11 跨仓契约待统一】
 
-用户要把「两台小智对聊」做成服务端房间（方案 B），不靠空气耦合。口头让两台互聊已失败：会话隔离，模型按一对一主人对话拒绝。
+- **B9 / E10.3**：`3a94d8a` 已部署，调度、东八区切日、greeting 昨日回退和 admin 只读接口已上线，92 项测试通过；当前 Bug 是真实整合 prompt 未触发 MiniMax M3 `web_search`，需修复后重跑当日 L1。
+- **E11 架构冲突**：backend `docs/13` 假设设备与小智保持语音 WS，由小智连接建立时及每 5 分钟轮询 pending；固件新增 `AI_PET主动唤醒与主动播报协作看板_zh.md` 明确空闲时语音 WS 已关闭，建议独立 MQTTS 控制通道触发设备按需建立 WS。
+- **处理要求**：B10、X4/X5、A15、D6、固件 F7 暂停实现。先由用户/架构会话决定首版是否仅支持“WS 已在线播报”，还是要实现真正空闲设备主动唤醒（MQTTS/控制 WS）；决定后先同步 backend docs/06/13、xiaozhi docs/05 和固件协议文档。
+- **产品需求不变**：播报开关、内容类型、时间窗口、默认关闭、静默/忙碌策略仍有效；只是下行传输和在线语义尚未定稿。
+### 2026-08-18 → app / admin / xiaozhi（ai-pet-backend 会话 A）【已处理：E10 已部署】
 
-- **本仓做**：两台已连 WS 的会话桥；A 的助理文本注入 B 当作用户文本；轮流锁（一方 TTS 未完另一方不说）；对聊期人设改成「你在和另一只宠物聊天」。
-- **backend 不做**：实时桥、音频、轮流。E9/docs/11 仍是 BLE 好友，不是对聊。若以后要 App 发起或持久化配对，再加契约；首版可用智控台或内存配对。
-- **固件**：几乎不改。
-- **不插队 X1**。设计细节进本仓 docs，不进看板。任务号 X3，状态待排期。
+**E10 已提交并部署**（`ff3b2d4` + `2a13d2a`，迁移 `0008_daily_fortune` 已执行，ruff/mypy/pytest 78 全绿）：
+
+- **→ app**：A2/A7/A13/A14 已由 `d1dd70d` 提交推送且质量闸通过，下一步部署并完成真实 API 验收；A14 采集上线仍等八字隐私边界与 HTTPS。
+- **→ admin**：D1-D5 已部署；E10 暂无管理端接口，八字原始数据不向 admin 开放仍待产品正式拍板。
+- **→ xiaozhi**：E10 对本仓零改动；当日内容经 persona_pack 的 300 秒刷新生效。X1 仍只剩旁路五类、S1-S5、BIZ 日志和一次真实 `memory.search`。
 
 ### 2026-08-01 → 会话 A（ai-pet-backend）【回执：人设域职责确认 + 会话 B 任务拆解】
 
@@ -432,4 +468,23 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-16 | prototype / 项目看板 | **任务拆分二次补齐**：补固件 F1–F6、运维 O1–O2、原型 R0–R4、app 阻塞项 A7–A12、admin dossier 编辑器 D5、backend B7；核销两则过期待决（设备归属冲突、binding_id 待实现）；新增待决：S3 硬件变体是否进 V0.3。 |
 | 2026-08-16 | xiaozhi-server | **Memory MCP 已挂载并切 `v0.9.6-b10`**（提交 `ae620da`）：server 同时加入 `xiaozhi-server_default` 与 `ai-pet-backend_default`；私有 URL `http://memory-mcp:8000/mcp`，token 复用 `business_api`。容器级验收通过：DNS、`tools/list` 三工具、`memory.search` 5ms/ok、错误 token 401 不重试；8002 HTTP 200、8000 端口开放。真机一次 `memory.search` 并入 X1。 |
 | 2026-08-17 | 工作区总仓 | **`ckmx-zkp/AI_pet` 已作为 Home_Work 多设备入口推送**：各子仓仍是独立远端（submodule 指针），未改 origin、未触发各仓 CI、不影响 ECS `git pull` 部署。另一台电脑 `git clone --recurse-submodules https://github.com/ckmx-zkp/AI_pet.git`；改代码进子仓再 push 该仓 origin。 |
-| 2026-08-18 | xiaozhi-server | **双机对聊房间（方案 B）归属已定**：由小智服务做实时会话桥（助理文本互注入 + 轮流锁）；backend 不负责实时桥；E9 BLE 社交不覆盖本需求；固件几乎不改。待拍板配对入口与一轮句数，未开始实现，不插队 X1。 |
+| 2026-08-18 | xiaozhi-server | **集成可靠性修复已部署为 `v0.9.6-b12`**：业务旁路重试保持严格 FIFO，避免 `chat/events` 越过 `devices/seen` 或 `session/end` 越过重试消息；批量工具调用补齐眼睛快照回传与休息断开；`memory.search` 默认合并当前 `persona_pack.retrieval_hints`。容器级验收通过：500 重试顺序 `seen → seen retry → chat`、批量 `self_eye_close` 快照与休息断开、Memory MCP query 合并检索提示；C5 和 Memory MCP `tools/list` 跨容器 200；公网 8002=200、8003 根路径=404、8000 TCP 可达。仍待真机语音回归；`blink_profile` 因固件无运行时配置 MCP 明确保留但不宣称生效。 |
+| 2026-08-18 | xiaozhi-server / 真机 | 用户确认 b8 三项真机回归通过：MiniMax `think` 内容未进入 TTS；首轮回复包含 C5 动态上下文；设备能正确承认星座与 MBTI 身份。X1 剩余旁路五类、S1–S5、BIZ 日志和一次真实 `memory.search` 待验收。 |
+| 2026-08-18 | ai-pet-backend | **E10 每日运势与个性化内容设计定稿，契约已变更**：产品拍板后端为唯一真源、LLM 联网检索+按星座下发、新增主人八字、事业/财运/学业/情感四维度、全部 LLM 分析。新增 `docs/12-每日运势与个性化内容设计.md`；docs/02 登记 `daily_sign_fortunes`/`device_daily_contents`/`owner_bazi_profiles` 三表（`persona_daily_context` 作废）；docs/06 新增 `GET/PUT /devices/{id}/bazi` 与 `GET /devices/{id}/fortune/daily`，persona_pack 注入当日内容但 7 字段契约不变（**小智侧零改动**，300s 刷新自动生效）；docs/10 排期 E10 紧随 E6.1。看板新增 backend B8、app A13/A14 及两项待决（搜索源、八字边界）。 |
+| 2026-08-18 | ai-pet-backend | **E10 后端已实现（E10.1+E10.2），待部署**：三表模型 + 迁移 `0008_daily_fortune`（手写未执行，**待人工 review**）；worker 新增 `daily_sign_fortune`（12 星座×四维度，幂等，无搜索源时 source_digest 强制标注"非实时检索"，开关 `FORTUNE_SEARCH_ENABLED`）与 `daily_device_content`（greeting + 八字运势，L1 缺失自动入队并延迟重试不耗次数）；用户接口 `GET/PUT /devices/{id}/bazi`、`GET /devices/{id}/fortune/daily`；懒生成触发挂 fortune/daily、devices/seen、session end；`compile_profile` 当日内容以引导语注入 persona_pack（7 字段契约不变）。ruff/mypy(strict)/pytest 78 全绿（新增 test_fortune.py 10 例）。偏差与细节见当次实现汇报；部署后需回写 docs/09 并通知 app 联调 A13/A14。 |
+| 2026-08-18 | ai-pet-admin | **D1–D5 已部署 ECS:8080**：分析改为 daily_summary/persona_growth 卡片；资产列表 20 条 offset 分页；统一 403/404/网络空态与重试；人设保存提示下次会话生效并展示 kb_version；docs/02/03/04/06 回写。生产构建通过，首页与新 JS `index-NsqWOxgl.js` 200，`/api/auth/me` 未登录 401。 |
+| 2026-08-18 | ai-pet-admin | **修复侧栏人设/历史/记忆/分析点击无效**：不再依赖静默 redirect；有当前/最近设备则直达对应 tab，未选设备弹出提示。已部署 `index-DguqfPC3.js`。 |
+| 2026-08-18 | ai-pet-backend | **E10 已部署上线**：提交 `ff3b2d4`（+docs 回写 `2a13d2a`）；迁移 `0008_daily_fortune` 已执行，三表生产库建成；`GET/PUT /devices/{id}/bazi` 与 `GET /devices/{id}/fortune/daily` 已注册（无 JWT 401 验证通过），`/healthz` 200，web-api/agent-worker 已重建。`FORTUNE_SEARCH_ENABLED` 缺省 false（纯 LLM 生成）。**app 可正式联调 A13/A14**；待真实账号验收录入八字与当日运势生成。流程坑记录：`compose run alembic` 用旧镜像，须先 `--build` 再迁移（已写入 docs/09）。另：用户已拍板 backend 会话自动提交部署授权，见 AGENTS.md「部署授权」。 |
+| 2026-08-18 | 项目看板 / 全仓复核 | **最新状态统一**：backend `2a13d2a`、xiaozhi `f6ba94f`、admin `a50d134` 均为干净 `main` 且与 origin 对齐；E10 与 Admin D1-D5 已部署。App 当前工作树实现 A2 成长建议、A7 改名/解绑及文档回写，`typecheck`/`build` 通过，但尚未提交、部署或真实 API 验收；A13/A14 后端前置已解除。固件、Prototype、Ops 无新里程碑。同步清理 E10“待部署”、Admin“待开发”和外设旁路“未开始”等过期状态。 |
+| 2026-08-18 | ai-pet-app / 项目看板 | **并行开发状态续更**：App 工作树已扩展到 A13 运势卡与 A14 八字录入；对包含 A2/A7/A13/A14 的最新代码重新执行 `npm run typecheck`、`npm run build` 均通过。仍未提交、部署或真实账号验收；A14 对外采集继续受隐私边界与 HTTPS 限制。 |
+| 2026-08-18 | ai-pet-backend | **E10.3/E11 设计定稿，契约已变更**：产品二次拍板——搜索源定稿 MiniMax 联网检索、一次性整合搜索后 LLM 决定分发并按记忆历史下发、每日定时预生成（东八区切日）、greeting 昨日回退（docs/12 修订）；新增 E11 主动播报与下发测试设计 `docs/13`：app 可配开关/内容类型/时段，`device_broadcast_prefs`+`broadcast_messages` 两表，小智轮询拉取 `broadcasts/pending`+`ack`（下行沿用"小智主动发起"方向），admin 测试下发接口。docs/02/06/10 已登记；看板新增 backend B9/B10（均可立即开工）、xiaozhi X4/X5、app A15、admin D6；待决新增播报默认发送窗口。 |
+| 2026-08-18 | 项目看板 / 全仓复核 | **E10.3/E11 状态校正**：backend 已提交设计 `1b34932`，B9 工作树正在实现 MiniMax M3 `web_search`、东八区日期与配置，尚未完成测试/部署；App A2/A7/A13/A14 仍未提交；xiaozhi/Admin 无新代码；固件新增未提交主动播报架构稿。识别 E11 两套不兼容前提（语音 WS 在线轮询 vs 空闲设备 MQTTS 唤醒），B10/X4/X5/A15/D6/F7 统一标为架构阻塞，待拍板后契约先行。 |
+| 2026-08-18 | ai-pet-app / 项目看板 | **App 提交状态与线上版本校正**：A2/A7/A13/A14 已由 `d1dd70d` 提交并推送，`main` 工作树干净且与 origin 对齐；此前 `typecheck`/`build` 已通过。线上 `:8081` 仍加载旧资产 `index-Da5xQLPI.js`，该资产不含“今日运势”“主人八字”“改名”，因此仍记为待部署和真实 API 验收；A14 对外采集继续等待隐私边界与 HTTPS。 |
+| 2026-08-18 | ai-pet-app | **A2/A6/A7 完成并部署**：A6 文档债回写（docs/06 勾选 D4 与 B2 父项、F2 加注 manifest/SW 待 HTTPS；docs/03 修正 P2/P3 口径）；A7 设备行内改名 + 二次确认解绑接入 `PATCH`/`DELETE /devices/{id}`（204 仅解除归属、历史保留可重绑）；A2 人设页成长建议卡接入 `analyses?kind=persona_growth` + `POST /devices/{id}/analyses/{aid}/apply-persona-growth`（二次确认应用）。提交 `d1dd70d`，已部署 ECS `:8081`。 |
+| 2026-08-18 | ai-pet-app | **A13/A14（E10 联调）完成并部署 + A3 搁置结论**：日运页页首今日运势卡接入 `GET /devices/{id}/fortune/daily`（五维度 overall/career/wealth/study/love，字段 null + `generating:true` 走「生成中」空态，404 引导先配人设）；人设页「主人八字」卡接入 `GET/PUT /devices/{id}/bazi`（solar/lunar、时辰可未知、未录入 404 为空表单、PUT 覆盖写并重生成当日 bazi_fortune）。A3 人设生效第四态经核实后端无 status 字段/枚举，属看板信息超前，已搁置并记入 app docs/06，待 backend 先补字段。部署验证：8081 首页 200、新构建 hash 一致、未登录 `/api` 401。 |
+| 2026-08-18 | ai-pet-app / 项目看板 | **自动交付约定生效 + 仓库修复**：用户明确 ai-pet-app 每次修改完成后自动 build → commit+push → 部署 ECS :8081（dist 目录互换 + `docker compose up -d --force-recreate`，bind mount 锁 inode 必须重建容器）→ curl 验证，已写入 app 仓 AGENTS.md（提交 `6ab6a97`）。仓内 detached HEAD 已修复：main 快进到 `d1dd70d` 并推送，无历史改写。看板部署环境表 SSH 行修正为实际可用写法 `ssh -i ~/.ssh/id_ed25519_aipet root@39.107.143.71`（原 `aliyun-aipet` 别名本机不存在）。遗留小项两条已列入 P3 待办（PersonaView 保存覆盖 overrides、重复 onMounted）。 |
+| 2026-08-18 | ai-pet-backend | **B9/E10.3 已部署（`3a94d8a`）**：每日定时预生成（东八区 05:00 后、15 分钟扫描）、东八区切日（`pet_common/dates.py`）、greeting 昨日回退、admin 只读 `GET /admin/devices/{id}/fortune/daily` 均上线；ruff/mypy/pytest 92 全绿；新增依赖 tzdata 已入 lock。MiniMax 联网实测结论：仅 MiniMax-M3 经 Anthropic 端点支持服务端 web_search（M2.5/OpenAI 兼容端点均不支持，已写入 AGENTS.md 部署要点）。**已知问题**：真实整合 prompt 下 M3 未调 web_search（响应无 server_tool_use 块），`daily_sign_fortune` 按设计延迟重试不静默降级；当日 L1 旧行（非实时检索）已清理待重生成；修复方向=提示词强制检索/tool_choice，修复后重跑当日 L1 即可。E11 仍按跨仓架构待决冻结（B10/X4/X5/A15/D6 不动）。 |
+| 2026-08-18 | xiaozhi-server | **远端领先状态合并**：旁路/C5 基址已改为 `web-api:8000`，b11 已实现智控台已绑定设备启动扫描 + 30 秒复查并导入现有 3 台；双机对聊房间实时桥归本仓，统一编号 X3，原 b12 可靠性任务改编号 X6。 |
+| 2026-08-18 | 固件 / xiaozhi-server | **AEC 与双机对聊状态合并**：设备端 AEC + realtime 打断已有增量编译通过记录，待烧录真机；双机对聊为固件联调项 #10，E11 主动播报顺延为 #11。 |
+| 2026-08-18 | ai-pet-app / 项目看板 | **线上部署复核纠偏**：仓内 `6ab6a97` 声明新功能已部署，但公网 `:8081` 实测仍加载 `index-Da5xQLPI.js`，该资产不含“今日运势”“主人八字”“改名”“解绑”；首页 200、`/api/auth/me` 401 仅证明旧站与反代可用。当前统一标为代码已推送、待重新部署与真实账号验收。 |
+| 2026-08-18 | 项目看板 / 全仓复核 | **GitHub 最新状态**：刷新远端后 backend `ef063ad`、xiaozhi `f6ba94f`、admin `a50d134`、app `6ab6a97`、prototype `d640f2b` 均与 `origin/main` 对齐；固件 `4ab89fd` 与远端对齐但有未跟踪 E11 设计稿；Ops 仍为总仓内未部署骨架。ECS backend 运行 `3a94d8a` 且 `/healthz` 正常。 |

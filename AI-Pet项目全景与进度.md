@@ -1,7 +1,7 @@
 # AI Pet 项目全景与进度（根协作文档）
 
 > **本文档是所有子项目 AI 会话的第一信息源。** 各仓会话开工前先读本文档拉取全局上下文，再读 `AI-Pet协作看板.md`（日常状态流水）和本仓 `AGENTS.md`。
-> 本文档记录**经代码核实的真实进度快照**（最近核实：2026-08-02，逐仓核对源码、提交记录与线上容器状态）。
+> 本文档记录**经代码核实的真实进度快照**（最近核实：2026-08-18，逐仓核对 Git 状态、近期提交、未提交改动、质量闸与看板部署记录）。
 > 日常状态变更仍记 `AI-Pet协作看板.md` / `AI-Pet固件联调看板.md`；当某仓完成阶段性里程碑后，回写本文档对应小节并更新"核实日期"。
 > 密钥、密码不进本文档，只记位置。
 
@@ -9,16 +9,18 @@
 
 固件（ESP32）⇄ xiaozhi-server（实时语音/OTA/MCP 路由）⇄ ai-pet-backend（业务真源：用户/设备/persona/记忆/KB）⇄ ai-pet-admin（运营管理台）+ ai-pet-app（用户端 PWA/桌面）。全部署在阿里云 ECS `39.107.143.71`（端口分配见协作看板，唯一真源）。
 
-## 项目经理摘要（2026-08-02）
+## 项目经理摘要（2026-08-18）
 
 | 工作流 | 已交付 | 当前状态 | 下一步 / 主要风险 |
 |---|---|---|---|
-| 用户端 | 注册登录、绑定码认领、设备切换、人设、历史、外设状态已上线 | 🟡 可做内测 | 记忆、分析、日运与数据导出体验待完善；正式发布还需域名与 HTTPS |
-| 业务后端 | 账号、设备、人设、历史、记忆/MCP、KB、管理端资产和成长 worker 已上线 | 🟡 运营能力待配置 | worker 需配置 LLM 后才会产出真实摘要、候选记忆与成长建议 |
-| 管理台 | 资产、人设、历史、外设、分析、KB 运营与记忆审核已上线 | 🟡 运营闭环可验收 | 等待 LLM worker 产出真实候选数据并完成流程验收 |
-| 设备与语音 | 真机语音和单眼情绪联动；人设刷新、外设回传及体验优化已部署 | 🟡 待真机验收 | 需取得人设变更、消息回传、断开会话、眼睛动作与休息行为的端到端证据 |
+| 用户端 | 注册登录、绑定/切换、人设、历史、记忆、小记、外设已部署；新功能代码已推送 | 🟡 A2/A6/A7/A13/A14 公网尚未生效；A3 搁置 | 重新部署 `d1dd70d`，核验新资产后做真实账号验收；A14 与正式发布仍受隐私/HTTPS 限制 |
+| 业务后端 | 核心 API、Memory MCP、Worker、KB、dossier、E10/E10.3 已上线 | 🟡 B9 已部署但联网检索触发有 Bug | 修复 M3 `web_search` 触发并重跑当日 L1；E11 先解决跨仓传输冲突 |
+| 管理台 | 资产、人设、历史、记忆、分析卡片、KB、分页与统一状态已上线 | 🟢 D1-D5 已部署 | 继续真实运营数据验收；无 E10 管理端接口 |
+| 设备与语音 | OTA/激活/语音、C5、persona、旁路、Memory MCP、b12 可靠性修复已部署 | 🟡 X1 部分通过 | 补齐旁路五类、S1-S5、BIZ 日志和一次真机 `memory.search` |
+| 固件 | P4 单眼、五个眼睛 MCP 工具、情绪/视线/眨眼/闭眼已实现 | 🟡 原型可用 | 先解决 OTA 空间和资产复现，再做第二只眼 |
+| 发布运维 | ECS 内测链路可用，Ops 只读采集器骨架已存在 | 🔴 正式发布未就绪 | 域名、ICP、HTTPS/WSS、正式监控告警 |
 
-**本周优先级**：优先完成真实设备端到端验收（人设变更、转写回传、会话结束、眼睛状态与休息行为），并配置 worker 的 LLM 连接以生成真实记忆/分析数据；再完善用户端记忆、分析与日运体验。当前全套线上容器正在运行；展示页、管理台、用户端均已部署，但用户端仍仅适合 HTTP 内测。
+**当前优先级**：X1 真机收口 > App `d1dd70d` 重新部署与真实账号验收 > backend B9 联网检索 Bug 修复 > E11 主动播报架构拍板 > 固件 F1 > 域名/TLS/监控。E11 未统一前不得并行实现 B10/X4/X5/A15/D6/F7。
 
 ### 项目主链路
 
@@ -68,91 +70,96 @@ flowchart LR
 
 ## 三、ai-pet-backend（业务后端）
 
-**定位**：FastAPI monorepo（web-api / memory-mcp / agent-worker / persona-compiler + pet_common 共享层）。Python 3.11+ / SQLAlchemy 2.0 async / PG16+pgvector / 队列=PG SKIP LOCKED。GitHub `ckmx-zkp/ai-pet-backend`，分支 main，工作区干净。
+**定位**：FastAPI monorepo（web-api / memory-mcp / agent-worker / persona-compiler + pet_common），Python 3.11+、SQLAlchemy async、PG16、PG `SKIP LOCKED`。GitHub `ckmx-zkp/ai-pet-backend`。
 
-**真实代码进度**（核实 2026-08-01）：
+**真实代码进度（核实 2026-08-18）**：
 
-- ✅ **2026-08-02 新近上线**：设备绑定码认领（E1.1）、人设读写与默认人设素材（E2）、对话历史查询/删除（E4）；数据库迁移已到 `0005_devices_binding_id`，线上健康检查通过。
+- `main=ef063ad`，工作树干净且与 `origin/main` 对齐；ECS 当前运行功能提交 `3a94d8a`。
+- 账号、设备、`binding_id`、persona/dossier、脱敏历史、记忆、分析、外设、KB 运营、Memory MCP 和异步 Worker 均已部署。
+- `daily_summary` 已用真实会话产出；Worker 已处理 MiniMax 思考标签和可重试 LLM 错误。
+- E10 已部署：迁移 `0008_daily_fortune`、八字读写、每日运势、两类 Worker 任务和 persona_pack 当日内容注入；质量闸 ruff/mypy/pytest 78 项全绿。
+- E10.3 已部署：MiniMax-M3 Anthropic `web_search`、东八区日期、每日 05:00 后预生成、greeting 昨日回退和 admin 运势只读接口已上线；新增 `tzdata`。
+- B9 质量闸 ruff/mypy/pytest 92 全绿，但真实整合 prompt 下 M3 未产生 `server_tool_use`/检索块；任务按设计延迟重试且不静默降级，当日 L1 已清理待修复后重生成。
+- E11 主动播报已提交 backend `docs/13` 契约设计，但与固件新增未提交架构稿存在关键冲突：语音 WS 在线轮询无法唤醒 WS 已关闭的空闲设备；固件建议独立 MQTTS 控制面。跨仓契约尚未定稿。
+- 尚未完成：E6.1 记忆画像、E2.1 问卷/preview、E7.1 KB 候选闭环、E8 export/保留清理/指标；`/export` 与 questionnaire 仍为 501。
 
-- ✅ **已实现并上线**：账号、用户设备、人设、脱敏历史、内部 persona_pack/chat events/peripheral/session end、用户与管理端记忆/MCP、KB 草稿/发布/反馈审核、管理端资产/绑定码/人设/历史/外设/分析读取，以及用户侧 analyses/peripheral 读取。
-- 🟡 **LLM 成长链已部署待配置**：`daily_summary` 可产出摘要、主题/情绪/跟进建议、候选记忆与人设成长建议；需在服务器配置 `LLM_BASE_URL`、`LLM_API_KEY`、`LLM_MODEL` 后才能处理真实会话。
-- ⬜ E9 社交端点仅文档定稿（docs/11），代码零实现（计划内，V0.3）。
-- 迁移 2 个：0001 建 14 表 + agent_tasks；0002 devices.user_id 可空。
-- 测试 4 文件 26 用例，只覆盖已实现部分（auth 8 / devices 13 / compiler 2 / smoke 3）。
+**文档地图**：接口真源 `docs/06`；数据模型 `docs/02`；E10 设计 `docs/12`；部署记录 `docs/09`；排期 `docs/10`。
 
-**文档清单**（docs/，全中文）：00 三仓边界 / 01 概述 / 02 数据模型 / 03 人设与星座KB / 04 记忆与脱敏 / 05 MCP与Worker / 06 HTTP API 契约 / 07 backlog / 08 技术栈决策 / 09 部署运维（端口表+上线记录）/ 10 开发计划（C0+E1~E9）/ 11 设备社交 V0.3。
-
-**下一步**：以真机完成 persona_pack、设备首见登记、转写、会话结束和外设回传验收；配置 LLM 并验收记忆、KB 反馈和 worker 分析产出。
-
-**出入提示**：docs/09 的"上线"仅指进程存活——memory-mcp 是桩、worker 无处理器，分析链路实际不可用。
+**下一步**：修复 B9 的强制检索提示或 `tool_choice` 并重跑当日 L1；E11 先拍板“仅在线 WS 播报”或“真正空闲唤醒控制通道”，再修改契约和实现 B10。
 
 ## 四、xiaozhi-server（实时语音后台）
 
-**定位**：上游 `xinnan-tech/xiaozhi-esp32-server` v0.9.6 快照二开。Python 语音服务 + Java manager-api + Vue2 manager-web，全模块 Docker Compose。GitHub `ckmx-zkp/aipet-xiaozhi-server-`。
+**定位**：上游 `xinnan-tech/xiaozhi-esp32-server` v0.9.6 快照二开，负责 OTA/激活、实时语音编排、动态 Prompt、设备 MCP 和业务旁路，不持有业务真源。
 
-**真实代码进度**（核实 2026-08-02）：
+**真实代码进度（核实 2026-08-18）**：
 
-- 本地 git 仅 2 个提交（导入快照 + gitignore），**仓内代码/compose/脚本相对上游零二开**；`config.yaml` 仅填入 1 个 GLM key，`server.websocket` 在仓内仍是占位符。
-- ⚠️ **仓内状态 ≠ 线上状态**：部署和配置修改（OTA 公网地址、auth_key、模型链路 GLM+豆包ASR+火山TTS）发生在服务器 `/opt/xiaozhi-server`，未回同步到本地仓。以 `AI-Pet协作看板.md` 和 `AI-Pet固件联调看板.md` 为线上状态真源。**后续会话在服务器上改配置后应回写本地仓或文档，避免漂移。**
-- 线上（以看板为准）：4 容器 Up，端口 8000/8002/8003 公网验证通过，真机 `8c:fd:49:0c:a8:78` 激活+首轮对话已通。
+- `main=f6ba94f`，工作树干净并与 `origin/main` 对齐；线上语音镜像已到 `xiaozhi-aipet-server:v0.9.6-b12`。
+- persona_pack、C5 动态上下文、chat events、devices/seen、session end、外设快照与 Memory MCP 均已部署。
+- b12 已补齐旁路严格 FIFO、批量眼睛工具快照/休息断开、`memory.search` 合并 persona 检索提示；容器级定向验收通过。
+- S7 真机已验收：`<think>` 不播报、首轮体现 C5、设备承认星座与 MBTI。
+- b11 已实现智控台已绑定设备启动扫描 + 30 秒复查自动导入，旁路/C5 改走 Docker 内网 `web-api:8000`；现有 3 台已导入。
+- X1 剩余：旁路五类落库、S1-S5、BIZ 日志证据和一次真实 `memory.search`。
+- 双机对聊房间实时桥已确定归 xiaozhi-server（X3），尚未实现，待拍板配对入口和单轮句数，不插队 X1。
 
-**文档清单**：00 三仓边界与硬边界 / 01 概述（Must 清单）/ 02 部署OTA与设备接入 / 03 人设注入（首选会话开始 HTTP 拉 persona_pack）/ 04 设备MCP路由 / 05 与backend集成接口（契约）/ 06 任务清单 Epic A–D / 07 模型与采购清单（未提交）。
+**文档地图**：边界 `docs/00`；部署基线 `docs/08`；backend 集成契约 `docs/05`；任务 `docs/06`。
 
-**下一步**：V0.2 集成——按当前字符串会话标识完成 persona_pack 拉取、chat/events 旁路写入、设备首见登记与会话结束回传；Memory MCP 待传输方式定稿。
+**下一步**：不再扩主链功能，优先用真机一次性收齐 X1 三侧证据；双机对聊 X3 后排。
 
 ## 五、ai-pet-admin（Web 管理台）
 
-**定位**：运营/调试向管理台前端，纯前端。Vue3 + Vite + TS + Element Plus + Pinia + axios。GitHub `ckmx-zkp/ai-pet-admin`。已上线 `http://39.107.143.71:8080`（Nginx 同源反代 backend 8010）。
+**定位**：Vue3 + Vite + TypeScript + Element Plus 运营管理台，线上 `http://39.107.143.71:8080`。
 
-**真实代码进度**（核实 2026-08-02）：
+**真实代码进度（核实 2026-08-18）**：
 
-- ✅ **B1.1+M2/M3/M4 已上线**：管理端资产查询与绑定码轮换、人设、脱敏历史、外设、分析、KB 运营与记忆审核均已部署；用户设备归属不再被管理台占用。
+- `main=a50d134`，工作树干净并与 `origin/main` 对齐。
+- 资产、绑定码轮换、人设/dossier、脱敏历史、记忆审核、分析、外设和 KB 运营均已上线。
+- D1-D5 已部署：分析卡片、20 条 offset 分页、统一空态/错误/重试、文档回写、dossier 生效提示。
+- 侧栏人设/历史/记忆/分析已修复为直达当前或最近设备；新构建已部署验证。
+- 当前无 E10 管理端接口；八字原始数据是否允许 Admin 查看仍待产品拍板。
 
-- ✅ **完整实现**：http 层（Bearer+401 拦截）、auth api/store（token 持久化）、路由守卫、登录/注册页、MainLayout（侧栏未实现项 disabled+标"后续"、admin 才显 KB、智控台外链）。
-- 🟡 **骨架**：设备列表页（调真实接口，501 显可恢复空态，**无绑定功能**）；`api/devices.ts` 仅 list/get。
-- ⬜ **空态/不存在**：设备详情页（纯 el-empty）；persona/messages/memories/analyses/peripheral/kb 全部无路由无页面。
-- 即 docs/04 的 A1/A2/A3 **实际已完成**（仓内看板 docs/06 滞后，仍列待办）；B1 仅只读列表。
-
-**文档清单**：00 协作边界 / 01 概述与IA / 02 页面交互规格（登录方式描述已过时，实际=login_name+密码）/ 03 API 清单 / 04 任务清单 A–D / 05 Codex 交接任务书 / 06 仓内看板 / 07 五仓定位 / `api-openapi.json` 契约快照（有 1 行未提交改动）。
-
-**下一步**：以真实 worker 产出的候选记忆、分析和 KB 反馈完成运营流程验收。
+**下一步**：真实运营数据验收；不重复开发 D1-D5。
 
 ## 六、ai-pet-app（用户端）
 
-**定位**：手机 PWA + 桌面，用户自服务（登录/绑设备/人设/记忆/日运）。Vue3 应用骨架、账号流程与设备绑定码认领已完成并部署到 ECS `:8081`，GitHub `ckmx-zkp/ai-pet-app-`。
+**定位**：Vue3 + Vite + TS strict 的手机 PWA + 桌面用户端，线上内测入口 `http://39.107.143.71:8081`。
 
-**已完成**：Vue3 + Vite + TS strict 工程、响应式导航、注册/登录与会话保持、`binding_id` 设备认领、设备列表/切换、人设设置、对话历史与外设状态；类型检查与生产构建通过，已部署内测。
+**真实代码进度（核实 2026-08-18）**：
 
-**文档清单**：00 协作边界（可做/禁做清单）/ 01 用户场景（7 个 JTBD，成功标准=5 分钟注册→绑设备→定人设）/ 02 功能拆解 MoSCoW（V0.2 Must=登录+绑定+人设+历史+记忆审核）/ 03 IA 与 P0–P8 页面规格 / 04 跨端断点（<600 底Tab / 600–1024 Rail / >1024 侧栏）/ 05 API 映射与配网流程 / 06 任务清单 Epic A–F（全未勾选）/ 07 选型决策。
+- 基线 `6ab6a97`（功能 `d1dd70d` + AGENTS.md），工作树干净且与 `origin/main` 对齐；注册登录、绑定码认领、多设备切换、人设、历史、记忆、小记和外设已部署。
+- A2 成长建议、A7 改名/解绑、A13 运势卡、A14 八字录入及 A6 文档回写已由 `d1dd70d` 提交推送；仓内有部署完成记录，但 2026-08-18 公网复核仍加载旧资产 `index-Da5xQLPI.js`，其中不含新功能文案。
+- 对新构建运行 `npm run typecheck` 与 `npm run build` 均通过；A13 未生成时按 `generating:true` 走「生成中」空态，A14 未录入时 GET 404 为空表单。
+- A3 人设生效第四态已搁置：核实 backend `PersonaProfile` 无 status 列、响应无状态字段、无相关枚举，需 backend 先补字段前端再做徽章，已记入 app docs/06「暂不具备实现条件」。
+- backend E10 已上线，A13/A14 前端代码已完成但公网未生效；A14 隐私边界和 HTTPS 未定，不得直接对外采集；重新部署后再做 A2/A7/A13/A14 与 E10 生成链路真实账号验收。
+- 阻塞项：A1 dossier 用户边界、A3 生效状态字段（待 backend）、A4 配网素材、A8 export 501、A9 E6.1、A10 E2.1、A11 域名/HTTPS。
 
-**AI 会话约定**（README 原文要点）：TS strict；写完自测通过再进下一功能；小步提交（一页面/端点一会话）；最简单实现优先；**先改 docs 再实现并回写**。
-
-**下一步**：记忆、分析、日运与数据导出体验；等待 worker 产生真实数据；正式发布需域名与 HTTPS。
+**下一步**：重新部署 App `d1dd70d` 并确认新构建 hash，再真实账号验收 A2/A7/A13/A14 与 E10 生成链路；A14 先完成隐私拍板和 HTTPS。
 
 ## 七、ESP32_XIAOZHI（固件 + 母文档）
 
-**定位**：真仓库在 `xiaozhi-esp32/`（上游 v2.2.6 fork，GitHub `ckmx-zkp/Tboy_P4_xiaozhi`）；根目录为母文档库（PRD/赛道/市场/服务器需求，只读勿删）。目标硬件 Waveshare ESP32-P4-WIFI6-Touch-LCD-7B。
+**定位**：实际固件仓 `ESP32_XIAOZHI/xiaozhi-esp32`，上游 v2.2.6 fork；目标硬件 Waveshare ESP32-P4 AI Pet。
 
-**真实代码进度**（核实 2026-08-02）：
+**真实代码进度（核实 2026-08-18）**：
 
-- ✅ 已提交可跑：AI Pet 板型（I2C 音频、SPI GC9A01 眼屏、CSI 摄像头复用上游、BOOT 键）；`pet_eye_display` C1 整帧状态图（SetEmotion/SetGaze/BlinkOnce/SetClosed/SetAutoIdle 全实现）；**5 个眼睛 MCP 工具已注册**（look/blink/close/open/set_emotion）并真机语音验证；17 个 RGB565 资产（9 帧已嵌入）。
-- 🟡 `main/pet/`（未提交）：视觉/行为**类型层设计稿**（pet_types、平台能力矩阵、K230 JSON 数据结构）——无解析器、无 UART 驱动、无 .cc、未被构建引用。
-- ⬜ 未开始：第二只眼（CS=IO29 已规划）、WS2812 灯带、双舵机（引脚均未配）、K230 实物链路、MIPI/触摸/背光。
-- 里程碑（AI_PET_PROGRESS_zh.md，07-18）：M0 基线✅ / M1 板型✅ / M2 双眼🟡 / M3 灯带舵机⬜ / M4 视觉⬜ / M5 体验层🟡。
-- 已知问题：误唤醒仍需从端侧 WakeNet 阈值处理；服务端已部署“休息/睡觉”闭眼后断开会话、30 秒无语音断连和 24 kHz 下行采样，待真机回归确认。
-- 未提交改动：`AI_PET_PROGRESS_zh.md`、`sdkconfig.defaults`、`main/pet/`、美术交接文档、后续规划文档。
+- 固件仓仍为 `4ab89fd` 并与 `origin/main` 对齐；有未跟踪 E11 主动播报设计稿，自 2026-07-18 后无代码提交。
+- P4 自研板型、GC9A01 单眼、情绪/视线/眨眼/闭眼与五个 `self.eye.*` MCP 工具已实现。
+- 干净克隆缺 9 个被忽略的眼睛 `.bin` 资产，构建可复现性仍有风险。
+- 应用镜像约占 OTA 槽 92.53%，F1 是第二只眼和后续行为层的前置。
+- 设备端 AEC + realtime 打断已有增量编译通过记录，但尚未烧录真机验收；WakeNet 误唤醒、第二只眼、WS2812/舵机、K230 UART 均未完成。
+- 新增未跟踪 `AI_PET主动唤醒与主动播报协作看板_zh.md`，当前仅设计、无代码；提出独立 MQTTS 控制 + 按需语音 WS，与 backend docs/13 的在线轮询方案待统一。
 
-**文档清单**：`AI_PET_DEV_PLAN_zh.md`（设计总纲）/ `AI_PET_PROGRESS_zh.md`（**进度真源，改代码必更新**）/ `AI_PET_VISION_REALTIME_PLAN_zh.md` / `AI_PET_EYE_*`（资产规格与绘图管线）/ `2026-07-18_后续开发规划_需二次审阅.md` / `xiaozhi-esp32/docs/`（上游协议：mqtt-udp/websocket/mcp/blufi/custom-board/code_style）。
+**下一步**：F1 OTA 资产迁移 + 眼睛资源确定性生成；完成前不继续堆叠第二只眼。
 
-**下一步**：接第二只眼 → 状态机驱动眼睛 → WS2812+舵机 → K230 UART 视觉。
+## 八、支持项目（Ops / Prototype / Hardware）
 
----
+- **ai-pet-ops**：根总仓内 V0 骨架，尚未部署。E11 若采用 MQTTS，域名/证书、broker、设备 ACL、凭据轮换和 8883 监控均成为新增前置。
+- **prototype**：`d640f2b`，已交付总览、X1 验收墙、人设初始化和“我的星仔”原型；R3 Admin 分析卡方向稿未开始，R4 等 X1。
+- **hardware**：S3 原理图已有软件视角审核；下载路径、功放供电、4G UART 电平三个 P0 未关闭，不满足正式投板 Go。
 
-## 八、跨仓集成状态速查
+## 九、跨仓集成状态速查
 
-详细表见 `AI-Pet协作看板.md`"集成点状态"。当前阻塞链：**backend 501 → xiaozhi V0.2 集成 / admin M2 / app V0.2 全在等**。P0 共识（2026-08-01）：C1 旁路写入 > A4 设备绑定（已完成）> B1+B3+B4 最小人设链。
+详细表见 `AI-Pet协作看板.md`“集成点状态”。主链剩余阻塞：X1 真机证据、App 新构建未在线生效、B9 联网检索触发 Bug、App A8/A9/A10 后端前置、A14 隐私/HTTPS、固件 F1、正式发布域名/监控；E11 另有“在线 WS 轮询 vs 空闲设备 MQTTS 唤醒”跨仓架构冲突。
 
-## 九、看板分工（不要写错地方）
+## 十、看板分工（不要写错地方）
 
 | 内容 | 写到哪里 |
 |------|----------|
