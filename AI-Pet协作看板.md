@@ -15,7 +15,7 @@
 | 仓库 | 路径 | 职责 | 当前开发会话 |
 |------|------|------|-------------|
 | **AI_pet（工作区总仓）** | `D:\Home_Work` | 多设备入口；子仓以 submodule 挂载。日常提交仍进各子仓 origin | 另一台电脑：`git clone --recurse-submodules https://github.com/ckmx-zkp/AI_pet.git` |
-| ai-pet-backend | `D:\Home_Work\ai-pet-backend` | 业务后端：用户/设备/KB/persona/记忆/MCP/worker | `main=664eb9e`（功能 `b0c5323`），与 origin 对齐且已部署 ECS；迁移 0011 主人档案账号级 |
+| ai-pet-backend | `D:\Home_Work\ai-pet-backend` | 业务后端：用户/设备/KB/persona/记忆/MCP/worker | `main=ae1ddd8`，已部署 ECS；迁移 0012 相处关系；主人/宠物档案已分开 |
 | xiaozhi-server | `D:\Home_Work\xiaozhi-server` | 实时语音后台（xinnan-tech 上游二开） | `main=99aa353`，b13 已部署：无语音会话窗口 300 秒；等待 X1 剩余真机验收 |
 | ai-pet-admin | `D:\Home_Work\ai-pet-admin` | Web 管理台 | `main=efdd8cd`，与 origin 对齐；D1-D5 已部署，当前无未提交改动 |
 | ai-pet-app | `D:\Home_Work\ai-pet-app` | 用户端（手机 PWA + 桌面） | `main=35f297c`（功能 `ffd04ae`），与 origin 对齐并已部署 `index-BhrOz7WB.js`；A1/A8/A9/A10 与趣味测试/星盘已上线，A3 待 backend status 字段 |
@@ -200,6 +200,7 @@
 
 | # | 任务 | 说明 | 状态 |
 |---|------|------|------|
+| B13 | 宠物-主人相处关系：`bond` 一设备一份（情感伴侣/逆子/爱子/相爱相杀等）；会话结束+记忆变更推断回写；`GET /devices/{id}/profiles` 分开主人与宠物 | 契约已变更 docs/02/04/06 | ✅ 已部署（`ae1ddd8`，迁移 0012） |
 | B12 | 主人/宠物主体拆分：主人=账号一份、多设备共享；问卷与趣味测试写 `owner_profiles`；八字/星盘迁 user 级；日运 L1 按主人星座；persona_pack 注入主人片段且不改 7 字段 | 契约已变更 docs/02/06/11/12；App A10 问卷勿再当宠物人设 | ✅ 已部署（`b0c5323`，迁移 0011） |
 | B1 | E6.1 记忆画像：记忆变更入队 → LLM 产出 `memory_profile` 卡片 | app A9 前置 | ✅ 已部署（`5e7e851`） |
 | B2 | E2.1 人设问卷 + `persona/preview` 编译预览（MBTI 算型在 backend，dry-run 不改库） | app A10 / admin 预览前置 | ✅ 已部署（`5e7e851`） |
@@ -350,6 +351,7 @@
 
 | 日期 | 仓库 | 事项 |
 |------|------|------|
+| 2026-08-18 | ai-pet-backend | **契约已变更并已部署 `ae1ddd8`**：主人/宠物档案必须分开读；相处关系一设备一份（情感伴侣/逆子/爱子/相爱相杀等），会话结束与记忆变更可更新。`GET /devices/{id}/profiles`、`GET/PUT /relationship`。迁移 0012。App 应用 profiles 分开展示。 |
 | 2026-08-18 | ai-pet-backend | **契约已变更并已部署 `b0c5323`**：主人=用户账号一份、多设备共享。问卷/趣味测试写 `owner_profiles`，不再写宠物 `persona_profiles`；八字与星盘迁 `user_id`（迁移 0011）。新增 `GET/PUT /owner` 与 `/owner/questionnaire`。日运 L1 按主人星座。App A10 需改接主人档案。 |
 | 2026-07-26 ~ 08-01 | ai-pet-backend | 技术栈决策（docs/08）、脚手架完成并首推 GitHub（ckmx-zkp/ai-pet-backend） |
 | 2026-08-01 | ai-pet-backend | 服务器（39.107.143.71）初始化完成；首次 compose 部署进行中 |
@@ -373,6 +375,14 @@
 | 2026-08-01 | xiaozhi-server | **V0.2 旁路模块上线**：`core/business_report.py`（队列+指数退避，4xx 丢弃）+ reportHandle 挂钩（user/assistant，独立于 chat_history_conf）+ close() 会话结束；契约已变更（docs/05：/api 前缀、session_id int64、device_uid）；自建镜像 `xiaozhi-aipet-server:v0.9.6-b1` 部署完成，容器内探针 422/401 通过；待真实对话 E2E |
 
 ## 跨会话消息（按时间倒序，读后可标 [已读]）
+
+### 2026-08-18 → ai-pet-app【主人/宠物档案必须分开，关系会随聊天变】
+
+- **契约已变更**（docs/06）：`GET /devices/{id}/profiles` 一次返回 `{owner, pet, relationship}`。
+- 宠物：`GET /devices/{id}/persona`，`subject=pet`。
+- 主人：`GET /owner`，`subject=owner`。
+- 关系：`GET/PUT /devices/{id}/relationship`，`kind` ∈ 情感伴侣 / 逆子 / 爱子 / 相爱相杀 / 知己 / 陪伴伙伴 / 守护者。会话结束和记忆变更后 worker 会更新；App 也可直选。
+- 请分开展示两份档案，关系不要写进宠物 MBTI/星座。
 
 ### 2026-08-18 → ai-pet-app【问卷/测试是主人，不是宠物】
 
