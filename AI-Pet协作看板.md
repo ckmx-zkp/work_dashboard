@@ -130,7 +130,7 @@
 - ✅ **Memory MCP 已挂载（2026-08-16，`v0.9.6-b10`，提交 `ae620da`）**：小智 server 同时加入 `xiaozhi-server_default` 与 `ai-pet-backend_default`；私有配置仅在服务器。容器级 `tools/list`、`memory.search` 和错误 token 401 已验收；真机调用仍待 X1。
 - ✅ **b12 集成可靠性修复已部署（2026-08-18）**：`f6ba94f` 已与 `origin/main` 对齐；业务旁路严格 FIFO、多工具眼睛快照/休息后处理、`memory.search` 合并 persona 检索提示均通过容器级定向验收。S7 三项真机已通过，X1 仅剩旁路五类、S1-S5、BIZ 日志与一次真实 `memory.search`。
 - ✅ **b11 智控台设备自动导入已部署**：启动扫描并每 30 秒复查，旁路/C5 基址统一为 `http://web-api:8000`；现有 3 台已导入。旧 `host.docker.internal:8010` 路径被 UFW 丢弃期间的事件已丢失且不可回放。
-- 📋 **双机对聊房间（方案 B）归属已定**：实时桥归 xiaozhi-server，backend 不做实时桥，固件几乎不改；尚未实现，待拍板配对入口和单轮句数，不插队 X1。
+- 📋 **BLE 偶遇双 AI 交流需求已校正（E9）**：户外低速 BLE 匿名发现，机器人主动询问主人；双方同意后交换短期 token 并各自上报，由 backend 生成本次双方受控交流内容。不是 App/智控台配对，不做实时会话桥；当前零实现。
 
 ## 任务拆分（2026-08-16 · 原型第五次校准）
 
@@ -224,7 +224,7 @@
 |---|------|------|------|
 | X1 | 真机 E2E 验收（最高优先）：b8 三项回归（think 不播报 / C5 首轮上下文 / 星座与 MBTI 身份）已由用户真机验证；剩余旁路五类落库 + S1–S5 体验回归 + b9 旁路日志（tag=BIZ）取证 + b10 真机一次 `memory.search`；可视化清单见 prototype `e2e-checklist.html` | 全部代码已部署 | 部分通过，剩余项待真机 |
 | X2 | Memory MCP 挂载：compose 接入受控共享网络 + 私有 URL/token + 三工具白名单 + 超时降级 | 已随 `v0.9.6-b10` 部署并完成容器级验收；真机调用并入 X1 | 容器级完成，待真机 |
-| X3 | 双机对聊房间（方案 B）：两台已连 WS 的设备做会话桥 + 轮流锁；A 助理句作为 B 的用户句注入 | 归属 xiaozhi-server；backend 不做实时桥，固件几乎不改；待拍板配对入口和一轮句数 | 待排期，不插队 X1 |
+| X3 | BLE 偶遇云端转发：同意后接收设备偶遇报告，转发 backend report/status/ack；不做实时语音桥 | 契约草案已写 docs/05；空闲控制通道未定，代码零实现 | 阻塞：先冻结控制通道与 backend schema |
 | X6 | 集成可靠性修复：旁路严格 FIFO、多工具眼睛快照/休息后处理、Memory MCP 自动合并 persona 检索提示 | 2026-08-18 已构建并部署 `xiaozhi-aipet-server:v0.9.6-b12`；容器级定向验收通过 | 已部署，待并入 X1 真机回归 |
 | X7 | 5 分钟会话窗口与空闲续聊提醒 | `b13` 已把最后有效用户语音后的断连窗口改为 300 秒；建议约 90/240 秒两次短提醒。首版可由小智固定短句实现；个性化内容需 backend 契约先行 | 300 秒已部署；提醒待开发 |
 | X4 | E11 主动播报下行通道 | 轮询仅覆盖语音 WS 已连接设备；空闲远程唤醒需独立控制通道 | 阻塞：等待 E11 传输架构拍板 |
@@ -253,7 +253,7 @@
 
 ### 明确不进本轮（禁止当作当前可做）
 
-- 社交 / Feed / 排行榜 / 重型养成：E9 仅 docs/11 定稿，固件 BLE 未开发；启动前须隐私方案评审。E9 不等于双机语音对聊房间（X3）；后者归 xiaozhi-server，另行排期。
+- Feed / 排行榜 / 重型养成仍不做。E9 已统一包含 BLE 偶遇双 AI 交流：同意前匿名发现、同意后换短期 token、双方上报、backend 生成受控内容；固件/小智/backend 均未实现，启动前须隐私与协议评审。
 - App 直连设备、实时语音、眼睛/舵机 MCP 控制：架构红线，App 只读设备状态。
 - 用问卷**替代**现有星座/MBTI 直选：问卷已上线，但是可选项，不得撤掉直选。
 - 把未实现能力画成当前可用；原型与产品页必须区分已上线 / 等待后端 / 等待硬件。
@@ -283,7 +283,7 @@
 - A3 人设“已验证生效”缺 backend 状态字段与枚举。
 - B3 配网引导缺最终硬件步骤、二维码/图文素材与失败恢复口径。
 - E11 主动播报的在线 WS 轮询与空闲设备 MQTTS/控制 WS 前提冲突；B10/X4/X5/A15/D6/F7/Ops MQTTS 均冻结。
-- 双机对聊已归 xiaozhi-server，但配对入口、单轮句数、首版状态存储尚未拍板。
+- BLE 偶遇交流的匿名发现包、双边同意确认、token TTL/重放防护、空闲控制通道、生成段数/时长和离线收尾尚未拍板。
 - PWA 安装、HTTPS/WSS、正式隐私发布受域名、ICP、TLS 与隐私政策阻塞。
 - Admin 是否可查看八字原始数据、Ops V1 告警接收通道、多板型产品定位仍待产品拍板。
 
@@ -322,7 +322,7 @@
 | **KB v3 第一人称宠物视角内容**：12 星座 + 16 MBTI 已按 version++ 发布新行，旧 v1/v2 保留；`follow_latest=true` 下次编译自动采用 | — | ✅ 已完成并部署（迁移 0009） |
 | **dossier 用户可见/可编辑边界**：六字段（身份/背景/角色/目标/进化规则/关系）中哪些对 App 用户可见或可编辑、哪些仅作 Prompt 编译来源；原型 `my-pet.html` 暂按"关系 + 陪伴偏好可编辑、其余只读"假设 | app A1 我的星仔页 | ✅ 用户 2026-08-18 拍板：暂不排班，六字段全部可见可编辑 |
 | **多板型产品定位**：P4、BOX-3B、LCD EV Board 的代码/配置基础已存在，但哪一块进入 V0.3、各自是否保留眼睛/外设仍影响固件排期与 BOM | 固件排期、BOM | 待产品拍板；LCD EV 当前先完成验证 |
-| **双机对聊房间（方案 B）**：实时桥归 xiaozhi-server，backend 不做实时编排；待拍板配对入口（智控台 / 口头口令 / App）、一轮句数、首版是否只做内存配对 | xiaozhi-server X3 / 产品 | 归属已定，细节待拍板 |
+| **BLE 偶遇双 AI 交流（E9）**：冻结匿名发现包、双边主人同意、同意后短期 token 交换、空闲控制通道、backend 生成内容段数/时长与离线收尾；旧 App/智控台/口头口令配对及实时桥方案作废 | backend E9 / xiaozhi X3 / 固件 / 产品 | **跨仓协议阻塞；当前零实现** |
 | **E10 LLM 联网搜索源**：每日星座运势内容由 LLM 联网检索生成；MiniMax/千帆是否自带联网，或接独立搜索 API（新密钥走服务器私有 .env）；无搜索源时降级为纯 LLM 生成并标注"非实时检索" | backend B8 内容质量 | ✅ 已定（2026-08-18）：MiniMax 联网检索，B9 实现 |
 | **八字数据可见边界**：用户本人已可在 App 录入/回显并完成真实账号验收；仍待拍板 Admin 是否能看原始生辰，以及正式隐私政策/删除口径 | admin、正式发布 | 用户侧已落地；Admin 与隐私政策待拍板 |
 | **播报默认发送窗口**：主动播报默认时段建议 08:00–21:00 东八区，app 可改；休息/闭眼态是否允许 care 类轻播报 | app A15、小智 X4 | 待产品拍板（在架构统一后生效） |
@@ -412,7 +412,7 @@
 2. **persona_pack**：在会话配置装配点后挂钩：拉 pack → 成功则覆盖 system prompt + 映射 `default_emotion` 到眼睛 MCP（set_emotion）；失败→本地磁盘缓存（`data/persona_cache/{device_uid}.json`）→ 再失败→内置安全默认 prompt。**会话内不重复拉取**（已定稿）。注意：E2 上线前智控台"测试1"的静态 prompt 保持现状（当前对话靠它）；E2 联调通过后我再把它清空停用，避免双人设窗口期
 3. **Memory MCP**：建议传输方式定 **streamable HTTP MCP**（同机 `http://127.0.0.1:<port>/mcp`），你侧 memory-mcp 目前是 stdio 骨架——请评估改造量；若坚持 stdio，我这边要用 mcp-proxy 桥接（多一个常驻进程，不倾向）。这需要改 docs/05 契约，你定了我执行。超时 800ms~1.5s、失败降级无记忆，按契约实现
 4. device_id 对齐：旁路和拉 pack 均直接用 MAC（`conn.device_id`），与你的 device_uid 唯一索引天然对齐
-5. 社交 `social.report`（V0.3）：已知悉，转发层到时再加，现在不动
+5. BLE 偶遇社交（V0.3）：已知悉；未来按 `social.encounter.report` → backend report/status/ack 转发，现在不动，不建实时会话桥
 
 **联调就绪条件**：E2（persona_pack 可用）+ chat events 端点可用。E1 devices 五端点已上线对我无阻塞（我不消费 devices API）。完成后请在看板 @ 我。
 
@@ -425,7 +425,7 @@ backend 会话 A 留言：人设真源归属已和用户对齐，你的职责清
 3. 智控台的智能体 prompt 配置留空/停用，不做本地人设编辑、学习、总结——人设成长闭环（worker 观察→KB 候选→人工审核→发新版）全部在 backend，你只是"落后一段时间"的展现方
 4. 对话内容原样旁路 `POST /internal/chat/events`（5 字段 schema 已钉死），脱敏由 backend 落库前统一执行，你不需要做脱敏
 5. 设备身份用 MAC/SN 对齐 backend `device_uid`；用户体系与你无关，不需要知道设备属于谁
-6. 【预留】社交功能（V0.3，backend docs/11）：将来设备经你转发 `social.report` MCP 调用，你现在不需要做任何事，知道有这回事即可
+6. 【预留】BLE 偶遇社交（V0.3，backend docs/11）：设备匿名发现并获主人同意后，经你转发偶遇 report/status/ack；backend 生成本次内容。当前控制通道未定，不需要实现
 
 backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此更新并通知你联调。
 | 2026-08-01 | ai-pet-backend | 同步根全景文档两处：① docs/08 用户端选型修订为 Vue3+PWA（原 Flutter 建议作废，以 app/docs/07 为准）；② 下一 Epic 按全景 P0 共识调整为 E3 旁路优先于 E2 |
@@ -518,3 +518,4 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-18 | ai-pet-app | **用户手测通过**：结果独立页、海报按结果配色、二维码扫码打开 PWA、应用名「守护星」已确认。代码已在 GitHub `ckmx-zkp/ai-pet-app-` 的 `main=18a6928`。 |
 | 2026-08-18 | ai-pet-admin | **跟进 backend 主人/宠物拆分与 bond 概念已部署**：B5 分析卡片扩展 memory_profile/relationship_update 两类只读卡片；新增 B7 运势核对只读 tab（owner 星座五维度 + 八字运势，不触发生成）；新增 B8 人设页只读展示相处关系 bond（kind/label/summary/来源/置信度）；新增 D7 运营指标页（`/admin/ops/metrics`，Agent Worker 任务 pending/failed 计数与近 24h 按 kind 分组，不含对话内容）；apply-persona-growth 管理端应用仍阻塞，需产品/backend 先拍板是否开放 admin 端点。构建通过并部署 ECS:8080，docs/03/04/06 已回写。 | |
 | 2026-08-19 | 项目看板 / 全仓复核 | **全仓代码审计与看板校正**：backend `1d1a4f3`（ruff/mypy/pytest 130 全绿）、admin `c6d4ae4` 与 app `7c3d4ed`（本地生产构建通过）、firmware `faaae15`、prototype `1ed2a3f` 均与远端对齐；区分最新代码与既有 ECS 部署证据，登记 App 结构化 27 类关系、LCD EV Board V1.5、Ops V0 与最新部署核验任务。 |
+| 2026-08-19 | 全仓 / 产品需求校正 | **双 AI 交流旧实时桥方案作废，契约已变更**：正确链路为户外低速 BLE 匿名发现 → 机器人主动询问主人 → 双方同意后交换短期 token → 双方各自经小智上报 → backend 生成本次受控交流内容 → 播放回执结束。backend docs/06/11、xiaozhi docs/05/06、固件计划/进度与本地排版页已同步；当前三侧代码均零实现，阻塞于 BLE 包、双边同意、空闲控制通道和生成约束。 |
