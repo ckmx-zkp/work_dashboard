@@ -10,15 +10,22 @@
 > 4. 改接口先改契约文档，再改代码，并在进度日志中注明"契约已变更"。
 > 5. 密钥、密码不进本文件，只记位置（如"见服务器 .env"）。
 
+## 本轮执行状态（2026-09-05）
+
+- 总仓已从 `48e3ab4` 安全快进至远端 `28d9fba`；原有硬件资料、bundle、logs 未纳入提交。
+- backend `68d30a5` 已推送并部署：一次构建、三应用服务同镜像，内置提交版本及 API/MCP 只读探测。本地 ruff/mypy/pytest 130 与新镜像隔离环境 130 测试通过；ECS 三容器 revision 与镜像 ID 一致，API 200、MCP 401/初始化/三工具清单通过；迁移仍为 0012。
+- App `9411a7f` 已推送并部署：结构化相处关系独立保存、页面按需加载、release.json 产物清单。生产构建与 Playwright 模拟 API 桌面/手机交互通过；Nginx HTTP 入口 39 个产物 SHA256 全部一致、用户接口 401。真实设备采用关系仍待验收。
+- 2026-09-05 只读核验：admin `c6d4ae4` 的 4 个当前构建产物与线上相同；小智 b13 的 180 个受版本控制 Python 文件与本地相同。旧“待部署”记录以本轮证据为准。
+
 ## 仓库地图
 
 | 仓库 | 路径 | 职责 | 当前开发会话 |
 |------|------|------|-------------|
 | **AI_pet（工作区总仓）** | `D:\Home_Work` | 多设备入口；子仓以 submodule 挂载。日常提交仍进各子仓 origin | 另一台电脑：`git clone --recurse-submodules https://github.com/ckmx-zkp/AI_pet.git` |
-| ai-pet-backend | `D:\Home_Work\ai-pet-backend` | 业务后端：用户/设备/KB/persona/记忆/MCP/worker | `main=1d1a4f3`；130 测试全绿；ECS 最后明确部署 `ae1ddd8`，最新 27 类关系/宠物口吻提交待部署验证 |
+| ai-pet-backend | `D:\Home_Work\ai-pet-backend` | 业务后端：用户/设备/KB/persona/记忆/MCP/worker | `68d30a5` 三服务同镜像已部署；130 测试通过；关系/宠物口吻代码已在线 |
 | xiaozhi-server | `D:\Home_Work\xiaozhi-server` | 实时语音后台（xinnan-tech 上游二开） | `main=99aa353`，b13 已部署：无语音会话窗口 300 秒；等待 X1 剩余真机验收 |
 | ai-pet-admin | `D:\Home_Work\ai-pet-admin` | Web 管理台 | `main=c6d4ae4`；本地生产构建通过；B5/B7/B8/D7 已部署，最新 KB 运营体验提交待补在线证据 |
-| ai-pet-app | `D:\Home_Work\ai-pet-app` | 用户端（手机 PWA + 桌面） | `main=7c3d4ed`；本地生产构建通过；“我的”页聚合已实现，最后明确在线 hash 为 `index-BOxyZSUr.js`，最新提交待补部署证据 |
+| ai-pet-app | `D:\Home_Work\ai-pet-app` | 用户端（手机 PWA + 桌面） | `9411a7f` 已部署；结构化关系与按需加载已实现；HTTP 39 文件哈希核验通过 |
 | ESP32_XIAOZHI | `D:\Home_Work\ESP32_XIAOZHI` | 母文档 + 固件 | `main=faaae15`；P4/BOX-3B/LCD EV Board 多板型基础；LCD EV V1.5 已烧录跑语音状态，待屏幕/唤醒目视验收 |
 | ai-pet-ops | `D:\Home_Work\ai-pet-ops` | 服务器只读监测与告警 | V0 骨架，未部署 |
 | prototype | `D:\Home_Work\prototype` | 产品/交互原型 | `main=f3b55a7`；新增本地排版决策中心；旧总览事实基线待更新 |
@@ -28,7 +35,7 @@
 | 项 | 值 |
 |----|-----|
 | 服务器 | 阿里云北京 ECS `39.107.143.71`（8C16G/148G，Ubuntu 22.04） |
-| SSH | `ssh -i ~/.ssh/id_ed25519_aipet root@39.107.143.71`（密钥文件已存在，仅密钥登录；本机 ssh config 无 `aliyun-aipet` 别名，勿再用旧写法） |
+| SSH | `ssh aliyun-aipet`（2026-09-05 已按本机 SSH config 实测；IdentityFile 位置为 `~/.ssh/aliyun_ecs`，仅记录位置） |
 | 部署目录 | backend：`/opt/ai-pet/ai-pet-backend`；admin：`/opt/ai-pet/ai-pet-admin`；xiaozhi-server：`/opt/xiaozhi-server` |
 | 密钥位置 | 服务器 `/opt/ai-pet/ai-pet-backend/.env`（POSTGRES_PASSWORD / JWT_SECRET_KEY / INTERNAL_SERVICE_TOKEN） |
 | 对外端口 | 22/443 + 8883(MQTTS，预留) + 8000/8002/8003=xiaozhi-server + 8080=admin Web + **80=协作看板展示页（Basic Auth）**；8010=backend web-api 仅供本机反代（UFW 未放行） |
@@ -519,3 +526,4 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-18 | ai-pet-admin | **跟进 backend 主人/宠物拆分与 bond 概念已部署**：B5 分析卡片扩展 memory_profile/relationship_update 两类只读卡片；新增 B7 运势核对只读 tab（owner 星座五维度 + 八字运势，不触发生成）；新增 B8 人设页只读展示相处关系 bond（kind/label/summary/来源/置信度）；新增 D7 运营指标页（`/admin/ops/metrics`，Agent Worker 任务 pending/failed 计数与近 24h 按 kind 分组，不含对话内容）；apply-persona-growth 管理端应用仍阻塞，需产品/backend 先拍板是否开放 admin 端点。构建通过并部署 ECS:8080，docs/03/04/06 已回写。 | |
 | 2026-08-19 | 项目看板 / 全仓复核 | **全仓代码审计与看板校正**：backend `1d1a4f3`（ruff/mypy/pytest 130 全绿）、admin `c6d4ae4` 与 app `7c3d4ed`（本地生产构建通过）、firmware `faaae15`、prototype `1ed2a3f` 均与远端对齐；区分最新代码与既有 ECS 部署证据，登记 App 结构化 27 类关系、LCD EV Board V1.5、Ops V0 与最新部署核验任务。 |
 | 2026-08-19 | 全仓 / 产品需求校正 | **双 AI 交流旧实时桥方案作废，契约已变更**：正确链路为户外低速 BLE 匿名发现 → 机器人主动询问主人 → 双方同意后交换短期 token → 双方各自经小智上报 → backend 生成本次受控交流内容 → 播放回执结束。backend docs/06/11、xiaozhi docs/05/06、固件计划/进度与本地排版页已同步；当前三侧代码均零实现，阻塞于 BLE 包、双边同意、空闲控制通道和生成约束。 |
+| 2026-09-05 | backend / App / 发布核验 | backend `68d30a5` 三应用同镜像部署并通过 API/MCP 协议检查；App `9411a7f` 结构化关系、路由按需加载与版本清单已部署，39 个 HTTP 产物摘要一致；本地 130 测试及模拟 API 手机/桌面交互通过。Admin/小智既有部署证据补齐；未修改接口契约，真机采用状态仍待验收。 |
