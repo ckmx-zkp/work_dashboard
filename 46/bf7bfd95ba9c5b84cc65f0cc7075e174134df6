@@ -1,0 +1,21 @@
+AI-Pet固件联调看板.md
+  s_c40701e4446788::t_50885c140725c2 3-4,136
+AI-Pet协作看板.md
+  s_c40701e4446788::t_b1ec040ac73120 55-56,532
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "46bf7bfd95ba9c5b84cc65f0cc7075e174134df6",
+  "prompts": {},
+  "sessions": {
+    "s_c40701e4446788": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a07ffe-a000-7941-a7d8-d40f3c0f5962",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kunpeng2.zhang <kunpeng2.zhang@ly.com>"
+    }
+  }
+}
