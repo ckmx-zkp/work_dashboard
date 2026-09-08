@@ -1,0 +1,22 @@
+AI-Pet协作看板.md
+  s_c40701e4446788::t_b827e74698a4c5 538
+  s_c40701e4446788::t_e5804972e5b8ab 54
+AI-Pet项目全景与进度.md
+  s_c40701e4446788::t_b827e74698a4c5 3-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "ed60ed9dc7998190078b6b0d05379fde5b119f4f",
+  "prompts": {},
+  "sessions": {
+    "s_c40701e4446788": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a07ffe-a000-7941-a7d8-d40f3c0f5962",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kunpeng2.zhang <kunpeng2.zhang@ly.com>"
+    }
+  }
+}
