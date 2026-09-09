@@ -1,0 +1,19 @@
+AI-Pet协作看板.md
+  s_031441294ae30b::t_5fba049a757537 540-542
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "e024fc86c395d712cfa9b90a70833d6d6b411dac",
+  "prompts": {},
+  "sessions": {
+    "s_031441294ae30b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a08567-a2e1-7b01-8424-ea695a85f38a",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kunpeng2.zhang <kunpeng2.zhang@ly.com>"
+    }
+  }
+}
