@@ -48,7 +48,7 @@
 | 版本 | 上游 v0.9.6 全模块（server + manager-web + MySQL + Redis，官方镜像） |
 | 端口 | 8000=设备 WebSocket；8002=智控台(manager-web/api，OTA 也在这：`/xiaozhi/ota/`)；8003=视觉/HTTP |
 | 代码 | 源码快照在 GitHub `ckmx-zkp/aipet-xiaozhi-server-`（钉 v0.9.6，无 fork 关联） |
-| 状态 | ✅ 4 容器与公网端口正常；语音镜像 `xiaozhi-aipet-server:v0.9.6-b13`；LLM=MiniMax-M2.5、ASR=豆包流式 2.0、TTS=火山双向流式，密钥仅在服务器私有配置 |
+| 状态 | ✅ 4 容器与公网端口正常；语音镜像 `xiaozhi-aipet-server:v0.9.6-b13`；LLM=MiniMax-M3、VLLM=MiniMax-M3、ASR=豆包流式 2.0、TTS=火山双向流式，密钥仅在服务器私有配置 |
 
 ## 集成点状态（双方共同维护）
 2026-09-08 人格化陪伴已部署：六工具+28份策略、候选偏好审批和会话约定；backend 9be6235、小智b14-companion、内部MCP20260908-companion。139后端测试、43内容测试、独立PG与MCP写入及线上真实检索通过，4块实体板原生客户端读取/重连通过，物理验收仍待补。朋友的赛博分身使用独立账号和虚拟设备，云桥20260908-cloud于20:14向指定小智云接入点注册14工具；不复用宠物数据。契约已变更，详见backend docs/06及小智docs/05、11。
@@ -133,7 +133,7 @@
 - ✅ 上游 v0.9.6 源码钉版并首推 GitHub（ckmx-zkp/aipet-xiaozhi-server-）
 - ✅ 全模块部署到 39.107.143.71 `/opt/xiaozhi-server`（4 容器正常；安全组+ufw 已放 8000/8002/8003；MySQL 弱密码已换）
 - ✅ 修复三处部署坑：OTA 下发占位域名（`server.fronted_url`/`server.ota`/`server.websocket` 已指向公网地址）、`server.auth_key` 与 `server.secret` 不一致（真机连不上的隐患）
-- ✅ 模型链路：LLM=MiniMax-M2.5（智能体“测试1”主用；千帆 `qianfan-code-latest`/GLM-4.5-Flash/Kimi K2.7 保留备用）；ASR=豆包流式 2.0（试用 20h）；TTS=火山双向流式·湾湾小何（`zh_female_wanwanxiaohe_moon_bigtts`）
+- ✅ 模型链路：LLM=`LLM_MiniMaxM3`（MiniMax-M3 多模态，智能体“测试1”及全部 5 个模板）；VLLM=`VLLM_MiniMaxM3`；ASR=豆包流式 2.0；TTS=火山双向流式·湾湾小何。M2.5 保留为已验证备用、非默认。6 台设备均挂同一智能体。
 - ✅ 真机 `8c:fd:49:0c:a8:78` 激活绑定+首轮对话联通（唤醒→ASR→GLM 人设→TTS→眼睛 emotion 联动）；固件联调看板：`AI-Pet固件联调看板.md`（本目录）
 - 🟡 V0.2 业务集成：内网与内部鉴权已联通；`v0.9.6-b4` 已实现 persona_pack 定时刷新/缓存/onboarding、眼睛 MCP 外设状态旁路，`v0.9.6-b2` 已改为 MAC + 原生字符串 UUID 的 devices/seen、chat events、session end。四项均待真机 E2E 落库证据。
 - ✅ **C5 + MiniMax 思考隔离已上线（2026-08-16）**：构建并切换 `xiaozhi-aipet-server:v0.9.6-b8`（线上由 b6 直跳 b8，b7 废弃）。内容：跨 chunk `<think>` 状态机过滤（`ThinkTagFilter`，本地提交 `e93bb14`）、MiniMax `thinking:{type:disabled}` 双保险、direct_answer 兜底剥离；并补齐服务器源码树 `connection.py` 此前缺失的 dynamic_context 合入块（否则 b7 即使上线 C5 也不会进 Prompt）。容器级验收通过：容器启动正常、容器内过滤器行为测试通过、容器内直连 C5 `GET /api/internal/context/device` 200/7ms/真机 3 条上下文；主机级复核：已认领真机 data 非空、未知设备空、无 token 401。仅剩真机验收。
@@ -253,6 +253,7 @@
 | F5 | PetBehaviorController + WS2812 + 双舵机 | V0.3 体验层；`main/pet/` 类型层尚未提交接线 | 待排期 |
 | F6 | K230 UART 视觉 | V0.3+ | 待排期 |
 | F7 | E11 主动播报控制面 Spike | 固件新增未跟踪设计稿建议独立 MQTTS + 按需语音 WS；尚未改代码 | 架构阻塞：等传输方案、域名/TLS/broker |
+| F8 | S3 USB 摄像头大板独立板型 | 按 2026-08-25 原理图/网表；目录 `xiaozhi-esp32/main/boards/aipet/esp32-s3-usb-cam/` | 骨架已入库；PA_EN/4G 电平未关，待真机 |
 
 固件联调细节仍写 `AI-Pet固件联调看板.md`，此处只记跨仓归属。
 
@@ -531,6 +532,9 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-08-18 | ai-pet-admin | **跟进 backend 主人/宠物拆分与 bond 概念已部署**：B5 分析卡片扩展 memory_profile/relationship_update 两类只读卡片；新增 B7 运势核对只读 tab（owner 星座五维度 + 八字运势，不触发生成）；新增 B8 人设页只读展示相处关系 bond（kind/label/summary/来源/置信度）；新增 D7 运营指标页（`/admin/ops/metrics`，Agent Worker 任务 pending/failed 计数与近 24h 按 kind 分组，不含对话内容）；apply-persona-growth 管理端应用仍阻塞，需产品/backend 先拍板是否开放 admin 端点。构建通过并部署 ECS:8080，docs/03/04/06 已回写。 | |
 | 2026-08-19 | 项目看板 / 全仓复核 | **全仓代码审计与看板校正**：backend `1d1a4f3`（ruff/mypy/pytest 130 全绿）、admin `c6d4ae4` 与 app `7c3d4ed`（本地生产构建通过）、firmware `faaae15`、prototype `1ed2a3f` 均与远端对齐；区分最新代码与既有 ECS 部署证据，登记 App 结构化 27 类关系、LCD EV Board V1.5、Ops V0 与最新部署核验任务。 |
 | 2026-08-19 | 全仓 / 产品需求校正 | **双 AI 交流旧实时桥方案作废，契约已变更**：正确链路为户外低速 BLE 匿名发现 → 机器人主动询问主人 → 双方同意后交换短期 token → 双方各自经小智上报 → backend 生成本次受控交流内容 → 播放回执结束。backend docs/06/11、xiaozhi docs/05/06、固件计划/进度与本地排版页已同步；当前三侧代码均零实现，阻塞于 BLE 包、双边同意、空闲控制通道和生成约束。 |
+| 2026-09-05 | 固件 | 按 `hardware/SCH_USB摄像头大板_2026-08-25` 新增独立板型 `xiaozhi-esp32/main/boards/aipet/esp32-s3-usb-cam/`。当前仅 WiFi+音频骨架；PA_EN=GPIO46 仅输入、4G UART 电平未关。未改 P4/BOX-3/LCD EV。 |
+| 2026-09-05 | 固件 | 在总仓新增独立 ESP-IDF 硬件测试工程 `ai-pet-s3-hwtest/`（非小智量产固件）。串口菜单覆盖 I2C/音频/双眼/灯带/按键/触摸/舵机/K230/4G/WiFi；4G 默认不供电。 |
+| 2026-09-05 | 固件 | `ai-pet-s3-hwtest` 补 U4 USB 摄像头：S3 USB Host + UVC，命令 `cam`，并纳入 `all`。摄像头插 U4（GPIO19/20），不是 K230 CSI。 |
 | 2026-09-05 | backend / App / 发布核验 | backend `68d30a5` 三应用同镜像部署并通过 API/MCP 协议检查；App `9411a7f` 结构化关系、路由按需加载与版本清单已部署，39 个 HTTP 产物摘要一致；本地 130 测试及模拟 API 手机/桌面交互通过。Admin/小智既有部署证据补齐；未修改接口契约，真机采用状态仍待验收。 |
 | 2026-09-08 | xiaozhi-server / 音乐 MCP | 复用授权凭据，独立音乐网关和四工具 MCP 已部署，全局配置覆盖全部登记板子的新会话；24 测试、真实四工具、小智客户端及公网 Ogg 流通过。App :8081 增加签名音频代理；未改业务接口契约。固件播放工具及逐板真机验收待补。 |
 | 2026-09-08 | xiaozhi-server / 内容MCP联网升级 | 契约已变更：运势、玄学、聊天成功结果增加搜索证据、来源及检索时间；已部署20260908-web，强制M3检索后M2.5生成，无证据不回退。34测试、三个线上MCP调用及小智原生客户端通过；音乐网关未切换，真机体验待验收。 |
@@ -544,3 +548,4 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-09-09 | xiaozhi-server / 重启快捷按钮 | 已上线并实测重启：模型配置页增加管理员重启入口，复用鉴权接口，确认提示、防重入及30秒等待、不自动重试；接口契约未变更，交互约定见docs/12。 |
 
 | 2026-09-09 | xiaozhi-server / 用量、视觉与声音复刻 | 契约已变更（docs/14）：重启按钮、用量提醒、天气401错误分类和视觉校验已上线（manager usage-r2 / voice b16-services-r2），MiniMax-M3视觉默认有效，67项为14有效/42无效/11待验证。复刻2.0训练、状态、次数与试听代码本次提交，尚未上线及完成隔离API验收；生产0音色，未执行真实训练。前端构建及Node7/Python7回归通过。 |
+| 2026-09-13 | xiaozhi-server | **对话+视觉切 MiniMax-M3**：新增 `LLM_MiniMaxM3`（从已验证 `VLLM_MiniMaxM3` 复制端点，密钥不入仓），设为 LLM 默认；智能体「测试1」与 5 个模板的 LLM/VLLM 均绑 M3；6 台设备（含 `d8:85:ac:ba:85:d8`）随智能体生效。Redis FLUSHALL。设备需重连。未改接口契约。 |
