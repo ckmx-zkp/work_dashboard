@@ -48,7 +48,7 @@
 | 版本 | 上游 v0.9.6 全模块（server + manager-web + MySQL + Redis，官方镜像） |
 | 端口 | 8000=设备 WebSocket；8002=智控台(manager-web/api，OTA 也在这：`/xiaozhi/ota/`)；8003=视觉/HTTP |
 | 代码 | 源码快照在 GitHub `ckmx-zkp/aipet-xiaozhi-server-`（钉 v0.9.6，无 fork 关联） |
-| 状态 | ✅ 4 容器与公网端口正常；语音镜像 `xiaozhi-aipet-server:v0.9.6-b13`；LLM=MiniMax-M3、VLLM=MiniMax-M3、ASR=豆包流式 2.0、TTS=火山双向流式，密钥仅在服务器私有配置 |
+| 状态 | ✅ 4 容器与公网端口正常；语音镜像 `xiaozhi-aipet-server:v0.9.6-b13`；对话 LLM=豆包 Seed 2.0 Mini、VLLM=MiniMax-M3、ASR=豆包流式 2.0、TTS=火山双向流式，密钥仅在服务器私有配置 |
 
 ## 集成点状态（双方共同维护）
 2026-09-08 人格化陪伴已部署：六工具+28份策略、候选偏好审批和会话约定；backend 9be6235、小智b14-companion、内部MCP20260908-companion。139后端测试、43内容测试、独立PG与MCP写入及线上真实检索通过，4块实体板原生客户端读取/重连通过，物理验收仍待补。朋友的赛博分身使用独立账号和虚拟设备，云桥20260908-cloud于20:14向指定小智云接入点注册14工具；不复用宠物数据。契约已变更，详见backend docs/06及小智docs/05、11。
@@ -133,7 +133,7 @@
 - ✅ 上游 v0.9.6 源码钉版并首推 GitHub（ckmx-zkp/aipet-xiaozhi-server-）
 - ✅ 全模块部署到 39.107.143.71 `/opt/xiaozhi-server`（4 容器正常；安全组+ufw 已放 8000/8002/8003；MySQL 弱密码已换）
 - ✅ 修复三处部署坑：OTA 下发占位域名（`server.fronted_url`/`server.ota`/`server.websocket` 已指向公网地址）、`server.auth_key` 与 `server.secret` 不一致（真机连不上的隐患）
-- ✅ 模型链路：对话 LLM=`LLM_MiniMaxM25`（MiniMax-M2.5）；视觉 VLLM=`VLLM_MiniMaxM3`；意图=`Intent_function_call`；ASR=豆包流式 2.0；TTS=火山双向流式·湾湾小何。2026-09-13 曾把对话也切到 M3，导致「看看我」不调 `take_photo`；已改回 M2.5 对话 + M3 识图。
+- ✅ 模型链路：对话 LLM=`LLM_DoubaoLLM`（`doubao-seed-2-0-mini-260428`）；视觉 VLLM=`VLLM_MiniMaxM3`；意图=`Intent_function_call`；ASR=豆包流式 2.0；TTS=火山双向流式·湾湾小何。2026-09-20 用火山方舟密钥切换；旧模型名 `doubao-1-5-pro-32k-250115` 本账号未开通。设备需重连。真机「看看我」待验收。
 - ✅ 真机 `8c:fd:49:0c:a8:78` 激活绑定+首轮对话联通（唤醒→ASR→GLM 人设→TTS→眼睛 emotion 联动）；固件联调看板：`AI-Pet固件联调看板.md`（本目录）
 - 🟡 V0.2 业务集成：内网与内部鉴权已联通；`v0.9.6-b4` 已实现 persona_pack 定时刷新/缓存/onboarding、眼睛 MCP 外设状态旁路，`v0.9.6-b2` 已改为 MAC + 原生字符串 UUID 的 devices/seen、chat events、session end。四项均待真机 E2E 落库证据。
 - ✅ **C5 + MiniMax 思考隔离已上线（2026-08-16）**：构建并切换 `xiaozhi-aipet-server:v0.9.6-b8`（线上由 b6 直跳 b8，b7 废弃）。内容：跨 chunk `<think>` 状态机过滤（`ThinkTagFilter`，本地提交 `e93bb14`）、MiniMax `thinking:{type:disabled}` 双保险、direct_answer 兜底剥离；并补齐服务器源码树 `connection.py` 此前缺失的 dynamic_context 合入块（否则 b7 即使上线 C5 也不会进 Prompt）。容器级验收通过：容器启动正常、容器内过滤器行为测试通过、容器内直连 C5 `GET /api/internal/context/device` 200/7ms/真机 3 条上下文；主机级复核：已认领真机 data 非空、未知设备空、无 token 401。仅剩真机验收。
@@ -550,3 +550,5 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-09-09 | xiaozhi-server / 用量、视觉与声音复刻 | 契约已变更（docs/14）：重启按钮、用量提醒、天气401错误分类和视觉校验已上线（manager usage-r2 / voice b16-services-r2），MiniMax-M3视觉默认有效，67项为14有效/42无效/11待验证。复刻2.0训练、状态、次数与试听代码本次提交，尚未上线及完成隔离API验收；生产0音色，未执行真实训练。前端构建及Node7/Python7回归通过。 |
 | 2026-09-13 | xiaozhi-server | **对话+视觉切 MiniMax-M3**：新增 `LLM_MiniMaxM3`（从已验证 `VLLM_MiniMaxM3` 复制端点，密钥不入仓），设为 LLM 默认；智能体「测试1」与 5 个模板的 LLM/VLLM 均绑 M3；6 台设备（含 `d8:85:ac:ba:85:d8`）随智能体生效。Redis FLUSHALL。设备需重连。未改接口契约。 |
 | 2026-09-13 | xiaozhi-server | **回退对话 LLM 为 M2.5，视觉保持 M3**：核验智能体意图已是 `function_call`、智控台人设为空。短期记忆写了「摄像头识别存在异常」。M3 作对话模型时未调 `self_camera_take_photo`。已把全部智能体/模板 LLM 改回 `LLM_MiniMaxM25`，清空该智能体 summary_memory，Redis FLUSHALL。待设备重连后真机「看看我」。 |
+| 2026-09-20 | 总仓 | 根目录新增规划文档 `嵌入式开发规划/`（P0 到板、P1 眼灯联动、记忆接具身、冻结项）。不是契约真源。 |
+| 2026-09-20 | xiaozhi-server | **对话 LLM 切豆包**：智能体「测试1」与 5 个模板绑定 `LLM_DoubaoLLM`（`doubao-seed-2-0-mini-260428`），VLLM 仍 MiniMax-M3，意图仍 function_call。火山方舟密钥仅写入服务器 DB + 本地 gitignored `api.txt`。旧 1.5-pro 未开通；Flash 系列 404。Redis FLUSHALL。设备需重连。未改接口契约。 |
