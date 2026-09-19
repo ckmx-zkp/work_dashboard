@@ -559,5 +559,7 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-09-20 | xiaozhi-server / 设备管理前端 | **设备管理页（`DeviceManagement.vue`）全面重塑为独立设备卡片流（Card Grid）**：解决原列表单一全宽表格问题，对标硬件智控中心实现独立设备卡片化。包含硬件拟物板型芯片头像、在线呼吸绿光灯、型号与固件 Badge、行内铅笔快速编辑设备别名、MAC 脱敏药丸、OTA 自动升级行内 Switch 与解绑/主题生成操作；支持批量多选勾选与卡片/表格一键视图切换。构建通过，已部署 ECS :8002 生效。 |
 | 2026-09-20 | ai-pet-admin | **管理后台 UI/UX 现代化全面重构与设备卡片流已部署**：重构 Indigo 科技紫靛设计系统、沉浸式双栏品牌登录/注册页、Element Plus 全套矢量图标侧边栏与毛玻璃顶栏、设备资产四维统计指标卡；设备列表全面重构为独立设备卡片流（Card Grid），提供硬件芯片头像、呼吸在线指示灯、Binding ID 复制框与人设/历史/记忆快捷直达，支持卡片/表格一键切换；详情三栏 Hero 看板与三组人设结构化卡片、KPI 运营仪表盘。本地构建通过，已部署 ECS :8080，HTTP 200 验证通过。 |
 | 2026-09-20 | xiaozhi-server / 模型与管理后台 | **火山方舟视觉大模型矩阵接入 + Token用量看板（方案B）+ 设备管理页优化**：探测并验证火山方舟已开通模型支持图文多模态推理（实测通过 Seed 2.0 Mini / Seed Character / Seed 2.0 Pro / Seed 2.1 Pro / Seed 2.0 Lite / GLM 5.3 Flash），配置写入 DB 并同步 config.yaml；实现方案B异步模型用量上报与 Redis 聚合统计并在智控台展示；修复 DeviceManagement 标题单位文本及 MySQL 中 sim-test 别名乱码。构建并通过热部署同步至 ECS :8002。 |
+| 2026-09-20 | ai-pet-backend | **KB v4 深度知识库上线（12星座+4元素+3动力+16型MBTI，融合东方五行玄学与认知功能治愈陪伴）**：新增 `persona_compiler/kb_v4.py` 与迁移脚本 `0014_kb_v4_enrichment.py`；142 项单元测试与 mypy 静态检查全绿。严格遵循只 INSERT published 新行原则，线上 PostgreSQL（ai-pet-backend-postgres-1）已成功执行迁移升至 0014。12 星座全量升级至 v4、4 元素升级至 v2、补齐首版三动力模式（cardinal/fixed/mutable v1 入库）、16 型 MBTI 全量升级至 v4；知识库深度涵盖东方五行生克、情志调理法则、气场开运物、现代占星三方四正与 MBTI 八大认知功能治愈抚慰，管理后台（:8080/kb）无缝同步生效。 |
+
 
 
