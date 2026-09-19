@@ -552,3 +552,5 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-09-13 | xiaozhi-server | **回退对话 LLM 为 M2.5，视觉保持 M3**：核验智能体意图已是 `function_call`、智控台人设为空。短期记忆写了「摄像头识别存在异常」。M3 作对话模型时未调 `self_camera_take_photo`。已把全部智能体/模板 LLM 改回 `LLM_MiniMaxM25`，清空该智能体 summary_memory，Redis FLUSHALL。待设备重连后真机「看看我」。 |
 | 2026-09-20 | 总仓 | 根目录新增规划文档 `嵌入式开发规划/`（P0 到板、P1 眼灯联动、记忆接具身、冻结项）。不是契约真源。 |
 | 2026-09-20 | xiaozhi-server | **对话 LLM 切豆包**：智能体「测试1」与 5 个模板绑定 `LLM_DoubaoLLM`（`doubao-seed-2-0-mini-260428`），VLLM 仍 MiniMax-M3，意图仍 function_call。火山方舟密钥仅写入服务器 DB + 本地 gitignored `api.txt`。旧 1.5-pro 未开通；Flash 系列 404。Redis FLUSHALL。设备需重连。未改接口契约。 |
+| 2026-09-20 | xiaozhi-server / 智控台前端 | **智控台 UI 全面现代化重塑上线（对标 xiaozhi.me 官方）**：重塑智能体卡片（`DeviceItem.vue`）为圆角白底拟物微阴影、官方小智机器人头像、LLM/TTS 胶囊芯片与小智蓝渐变药丸按钮；重塑智能体首页（`home.vue`）Banner 微蓝流体渐变、毛玻璃搜索框与自适应现代 Grid 栅格；重塑角色配置页（`roleConfig.vue`）为四大模块化独立卡片分栏（基础档案、模型大脑、语音交互、人设记忆）与顶部吸顶操作条；重塑导航栏（`HeaderBar.vue`）为毛玻璃高质感与小智蓝激活胶囊。本地构建通过，已全量同步部署至 ECS :8002 Nginx，HTTP 200 验证通过。 |
+
