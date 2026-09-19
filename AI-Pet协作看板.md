@@ -553,4 +553,6 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-09-20 | 总仓 | 根目录新增规划文档 `嵌入式开发规划/`（P0 到板、P1 眼灯联动、记忆接具身、冻结项）。不是契约真源。 |
 | 2026-09-20 | xiaozhi-server | **对话 LLM 切豆包**：智能体「测试1」与 5 个模板绑定 `LLM_DoubaoLLM`（`doubao-seed-2-0-mini-260428`），VLLM 仍 MiniMax-M3，意图仍 function_call。火山方舟密钥仅写入服务器 DB + 本地 gitignored `api.txt`。旧 1.5-pro 未开通；Flash 系列 404。Redis FLUSHALL。设备需重连。未改接口契约。 |
 | 2026-09-20 | xiaozhi-server / 智控台前端 | **智控台 UI 全面现代化重塑上线（对标 xiaozhi.me 官方）**：重塑智能体卡片（`DeviceItem.vue`）为圆角白底拟物微阴影、官方小智机器人头像、LLM/TTS 胶囊芯片与小智蓝渐变药丸按钮；重塑智能体首页（`home.vue`）Banner 微蓝流体渐变、毛玻璃搜索框与自适应现代 Grid 栅格；重塑角色配置页（`roleConfig.vue`）为四大模块化独立卡片分栏（基础档案、模型大脑、语音交互、人设记忆）与顶部吸顶操作条；重塑导航栏（`HeaderBar.vue`）为毛玻璃高质感与小智蓝激活胶囊。本地构建通过，已全量同步部署至 ECS :8002 Nginx，HTTP 200 验证通过。 |
+| 2026-09-20 | xiaozhi-server / 设备管理前端 | **设备管理页（`DeviceManagement.vue`）全面重塑为独立设备卡片流（Card Grid）**：解决原列表单一全宽表格问题，对标硬件智控中心实现独立设备卡片化。包含硬件拟物板型芯片头像、在线呼吸绿光灯、型号与固件 Badge、行内铅笔快速编辑设备别名、MAC 脱敏药丸、OTA 自动升级行内 Switch 与解绑/主题生成操作；支持批量多选勾选与卡片/表格一键视图切换。构建通过，已部署 ECS :8002 生效。 |
+
 
