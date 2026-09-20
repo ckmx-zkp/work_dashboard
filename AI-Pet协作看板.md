@@ -57,6 +57,8 @@
 
 同日升级：三个内容工具已强制 MiniMax-M3 联网检索后由 M2.5 生成，成功结果带来源/检索时间，无证据即失败，不回退纯生成。34测试及三个线上MCP真实调用通过，本次耗时约16至35秒；全局接入范围不变，真机体验待验收。
 
+2026-09-20 契约已变更：讲故事/说笑话/陪聊允许不联网；MiniMax 不可用时内容生成回退火山方舟 DeepSeek-V4-Flash。已部署语音 `v0.9.6-b16-entertain` 与内容 MCP `20260920-ark-fallback`。线上 daily_chat 已用方舟回退成功出内容。方舟密钥只在服务器 env。设备需重连。云桥未改。
+
 | 集成点 | 契约 | backend 侧 | xiaozhi-server 侧 | 联调 |
 |--------|------|-----------|-------------------|------|
 | persona_pack 拉取 | `GET /api/internal/devices/{uid}/persona_pack` | ✅ 已部署（E2/E10）：固定 7 字段；未配置人设返回 404；当日内容由 backend 注入 | 🟡 b6 起支持首次拉取/300 秒刷新/缓存/onboarding；S7 身份与 C5 已真机通过 | 待真机验证人设修改后的刷新生效 |
@@ -561,4 +563,6 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-09-20 | xiaozhi-server / 模型与管理后台 | **火山方舟视觉大模型矩阵接入 + Token用量看板（方案B）+ 设备管理页优化**：探测并验证火山方舟已开通模型支持图文多模态推理（实测通过 Seed 2.0 Mini / Seed Character / Seed 2.0 Pro / Seed 2.1 Pro / Seed 2.0 Lite / GLM 5.3 Flash），配置写入 DB 并同步 config.yaml；实现方案B异步模型用量上报与 Redis 聚合统计并在智控台展示；修复 DeviceManagement 标题单位文本及 MySQL 中 sim-test 别名乱码。构建并通过热部署同步至 ECS :8002。 |
 | 2026-09-20 | ai-pet-backend | **KB v4 深度知识库上线（12星座+4元素+3动力+16型MBTI，融合东方五行玄学与认知功能治愈陪伴）**：新增 `persona_compiler/kb_v4.py` 与迁移脚本 `0014_kb_v4_enrichment.py`；142 项单元测试与 mypy 静态检查全绿。严格遵循只 INSERT published 新行原则，线上 PostgreSQL（ai-pet-backend-postgres-1）已成功执行迁移升至 0014。12 星座全量升级至 v4、4 元素升级至 v2、补齐首版三动力模式（cardinal/fixed/mutable v1 入库）、16 型 MBTI 全量升级至 v4；知识库深度涵盖东方五行生克、情志调理法则、气场开运物、现代占星三方四正与 MBTI 八大认知功能治愈抚慰，管理后台（:8080/kb）无缝同步生效。 |
 | 2026-09-20 | xiaozhi-server / 设备独立音色与火山音色库 | **每个设备支持独立配置专属音色 + 一键导入火山官方 50+ 预置音色库全链路已部署上线**：数据库 `ai_device` 表扩展 5 个专属语音字段；后端 `ConfigServiceImpl` 优先按设备下发独立音色与语速/音量/音调并支持置空继承智能体；`TimbreService` 实现官方 53 款火山音色库同步导入；前端新增 `DeviceVoiceDialog.vue` 音色试听配置弹窗与卡片专属音色标识；代码已推送 GitHub，构建部署至 ECS :8002 验证通过。 |
+| 2026-09-20 | xiaozhi-server / 内容MCP | 契约已变更：娱乐陪聊（故事/笑话/闲聊）不强制联网，工具失败改口由对话模型自己讲；运势/玄学仍须检索。已部署 `v0.9.6-b16-entertain` + `xiaozhi-music-aipet:20260920-entertain`；backend/网关/云桥未改。设备需重连后真机验收。 |
+| 2026-09-20 | xiaozhi-server / 内容MCP | MiniMax 不可用时生成回退火山方舟 DeepSeek-V4-Flash。密钥只写入服务器 content.env。已部署 `xiaozhi-music-aipet:20260920-ark-fallback`；线上 daily_chat 回退成功出内容。 |
 
