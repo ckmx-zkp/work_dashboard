@@ -258,7 +258,7 @@
 | F5 | PetBehaviorController + WS2812 + 双舵机 | V0.3 体验层；`main/pet/` 类型层尚未提交接线 | 待排期 |
 | F6 | K230 UART 视觉 | V0.3+ | 待排期 |
 | F7 | E11 主动播报控制面 Spike | 固件新增未跟踪设计稿建议独立 MQTTS + 按需语音 WS；尚未改代码 | 架构阻塞：等传输方案、域名/TLS/broker |
-| F8 | S3 USB 摄像头大板独立板型 | 目录 `xiaozhi-esp32/main/boards/aipet/esp32-s3-usb-cam/` | PA_EN 播放时驱动 GPIO46；AEC 参考改为 MIC3。烧录前拆硬拉高。喇叭和唤醒后识别未验收。4G 电平未关 |
+| F8 | S3 USB 摄像头大板独立板型 | 目录 `xiaozhi-esp32/main/boards/aipet/esp32-s3-usb-cam/` | PA_EN 播放时驱动 GPIO46。对话关掉回采，只送 MIC1。MIC3 不接喇叭脚。唤醒后识别未验收。4G 电平未关 |
 
 固件联调细节仍写 `AI-Pet固件联调看板.md`，此处只记跨仓归属。
 
@@ -568,4 +568,5 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-09-23 | 固件 | S3 USB 摄像头大板 CN1：COM28 真机 GPIO5 电容计数随触摸变化。GPIO6/7 计数钉死，确认为硬件问题，软件只认 GPIO5。 |
 | 2026-09-23 | 固件 | S3 大板功放软件改为播放时驱动 GPIO46。烧录前须拆掉 PA_EN 硬拉高。喇叭未真机验收。固件改动未提交。 |
 | 2026-09-23 | 固件 | S3 大板唤醒后只识别唤醒词：AEC 参考由 MIC2 改为 MIC3。未烧录验收。 |
+| 2026-09-23 | 固件 | MIC3 回采仍听不到。确认 MIC3 不接功放喇叭脚。对话改为只送 MIC1。未烧录验收。 |
 
