@@ -565,4 +565,5 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-09-20 | xiaozhi-server / 设备独立音色与火山音色库 | **每个设备支持独立配置专属音色 + 一键导入火山官方 50+ 预置音色库全链路已部署上线**：数据库 `ai_device` 表扩展 5 个专属语音字段；后端 `ConfigServiceImpl` 优先按设备下发独立音色与语速/音量/音调并支持置空继承智能体；`TimbreService` 实现官方 53 款火山音色库同步导入；前端新增 `DeviceVoiceDialog.vue` 音色试听配置弹窗与卡片专属音色标识；代码已推送 GitHub，构建部署至 ECS :8002 验证通过。 |
 | 2026-09-20 | xiaozhi-server / 内容MCP | 契约已变更：娱乐陪聊（故事/笑话/闲聊）不强制联网，工具失败改口由对话模型自己讲；运势/玄学仍须检索。已部署 `v0.9.6-b16-entertain` + `xiaozhi-music-aipet:20260920-entertain`；backend/网关/云桥未改。设备需重连后真机验收。 |
 | 2026-09-20 | xiaozhi-server / 内容MCP | MiniMax 不可用时生成回退火山方舟 DeepSeek-V4-Flash。密钥只写入服务器 content.env。已部署 `xiaozhi-music-aipet:20260920-ark-fallback`；线上 daily_chat 回退成功出内容。 |
+| 2026-09-23 | 固件 | S3 USB 摄像头大板 CN1：COM28 真机 GPIO5 电容计数随触摸变化。GPIO6/7 计数钉死，确认为硬件问题，软件只认 GPIO5。 |
 
