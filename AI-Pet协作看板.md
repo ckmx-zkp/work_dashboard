@@ -23,7 +23,7 @@
 |------|------|------|-------------|
 | **AI_pet（工作区总仓）** | `D:\Home_Work` | 多设备入口；子仓以 submodule 挂载。日常提交仍进各子仓 origin | 另一台电脑：`git clone --recurse-submodules https://github.com/ckmx-zkp/AI_pet.git` |
 | ai-pet-backend | `D:\Home_Work\ai-pet-backend` | 业务后端：用户/设备/KB/persona/记忆/MCP/worker | `68d30a5` 三服务同镜像已部署；130 测试通过；关系/宠物口吻代码已在线 |
-| xiaozhi-server | `D:\Home_Work\xiaozhi-server` | 实时语音后台（xinnan-tech 上游二开） | `main=99aa353`，b13 已部署：无语音会话窗口 300 秒；等待 X1 剩余真机验收 |
+| xiaozhi-server | `D:\Home_Work\xiaozhi-server` | 实时语音后台（xinnan-tech 上游二开） | 语音 b17-asr-apikey 已部署；ASR/TTS 云端探测通过，等待 X1 与实体板麦克风真机验收 |
 | ai-pet-admin | `D:\Home_Work\ai-pet-admin` | Web 管理台 | `main=c6d4ae4`；本地生产构建通过；B5/B7/B8/D7 已部署，最新 KB 运营体验提交待补在线证据 |
 | ai-pet-app | `D:\Home_Work\ai-pet-app` | 用户端（手机 PWA + 桌面） | `9411a7f` 已部署；结构化关系与按需加载已实现；HTTP 39 文件哈希核验通过 |
 | ESP32_XIAOZHI | `D:\Home_Work\ESP32_XIAOZHI` | 母文档 + 固件 | `main=faaae15`；P4/BOX-3B/LCD EV Board 多板型基础；LCD EV V1.5 已烧录跑语音状态，待屏幕/唤醒目视验收 |
@@ -48,7 +48,7 @@
 | 版本 | 上游 v0.9.6 全模块（server + manager-web + MySQL + Redis，官方镜像） |
 | 端口 | 8000=设备 WebSocket；8002=智控台(manager-web/api，OTA 也在这：`/xiaozhi/ota/`)；8003=视觉/HTTP |
 | 代码 | 源码快照在 GitHub `ckmx-zkp/aipet-xiaozhi-server-`（钉 v0.9.6，无 fork 关联） |
-| 状态 | ✅ 4 容器与公网端口正常；语音镜像 `xiaozhi-aipet-server:v0.9.6-b13`；对话 LLM=豆包 Seed 2.0 Mini、VLLM=MiniMax-M3、ASR=豆包流式 2.0、TTS=火山双向流式，密钥仅在服务器私有配置 |
+| 状态 | 语音镜像 `xiaozhi-aipet-server:v0.9.6-b17-asr-apikey` 运行中；当前智能体对话/视觉=MiniMax-M3、ASR=豆包流式 2.0 新版 API Key、TTS=火山双向流式。ASR/TTS 云端真实探测通过，密钥仅在服务器私有配置；实体板语音链路待验收 |
 
 ## 集成点状态（双方共同维护）
 2026-09-08 人格化陪伴已部署：六工具+28份策略、候选偏好审批和会话约定；backend 9be6235、小智b14-companion、内部MCP20260908-companion。139后端测试、43内容测试、独立PG与MCP写入及线上真实检索通过，4块实体板原生客户端读取/重连通过，物理验收仍待补。朋友的赛博分身使用独立账号和虚拟设备，云桥20260908-cloud于20:14向指定小智云接入点注册14工具；不复用宠物数据。契约已变更，详见backend docs/06及小智docs/05、11。
@@ -58,6 +58,8 @@
 同日升级：三个内容工具已强制 MiniMax-M3 联网检索后由 M2.5 生成，成功结果带来源/检索时间，无证据即失败，不回退纯生成。34测试及三个线上MCP真实调用通过，本次耗时约16至35秒；全局接入范围不变，真机体验待验收。
 
 2026-09-20 契约已变更：讲故事/说笑话/陪聊允许不联网；MiniMax 不可用时内容生成回退火山方舟 DeepSeek-V4-Flash。已部署语音 `v0.9.6-b16-entertain` 与内容 MCP `20260920-ark-fallback`。线上 daily_chat 已用方舟回退成功出内容。方舟密钥只在服务器 env。设备需重连。云桥未改。
+
+2026-09-23 ASR 鉴权切换：小时版语音识别剩余额度对应新版 API Key，已仅切换 ASR 私有配置并部署语音 `v0.9.6-b17-asr-apikey`；TTS 配置不变。ASR/TTS 独立真实探测均有效，线上容器实际 ASR 提供者识别合成音频为“你好，模型测试。”。设备需重连后实测麦克风与完整语音轮次。
 
 | 集成点 | 契约 | backend 侧 | xiaozhi-server 侧 | 联调 |
 |--------|------|-----------|-------------------|------|
@@ -569,4 +571,5 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-09-23 | 固件 | S3 大板功放软件改为播放时驱动 GPIO46。烧录前须拆掉 PA_EN 硬拉高。喇叭未真机验收。固件改动未提交。 |
 | 2026-09-23 | 固件 | S3 大板唤醒后只识别唤醒词：AEC 参考由 MIC2 改为 MIC3。未烧录验收。 |
 | 2026-09-23 | 固件 | MIC3 回采仍听不到。确认 MIC3 不接功放喇叭脚。对话改为只送 MIC1。未烧录验收。 |
+| 2026-09-23 | xiaozhi-server | 仅 ASR 切换火山新版 API Key 鉴权，部署 `v0.9.6-b17-asr-apikey`；独立 ASR/TTS 探测有效，生产提供者识别合成 WAV 成功。TTS 未改；实体板麦克风及整轮语音待真机验收。 |
 
