@@ -1,0 +1,19 @@
+AI-Pet协作看板.md
+  s_15ffd0975ef2d6::t_42527ece5ee673 26,51,62-63,574
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "4478b5c4a36ef6ec27a4f3ae8de09b01d64ee745",
+  "prompts": {},
+  "sessions": {
+    "s_15ffd0975ef2d6": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0cd1d-992f-70e1-ba9c-7957b41cb103",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "kunpeng2.zhang <kunpeng2.zhang@ly.com>"
+    }
+  }
+}
