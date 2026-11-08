@@ -191,3 +191,4 @@
 | 2026-10-02 | 固件 | 巨蟹眼睛从 108 改为铺满 128 宽，垂直第 26–154 行。视线平移 12px 改为 8px。资源已生成，已烧 COM25。目视仍偏左上，送屏再往右 6px、往下 8px，已再烧，待目视。 |
 | 2026-11-08 | 固件 | 新 S3 大板 COM25 完整烧录：ESP32-S3 QFN56、32MB octal、16MB PSRAM，MAC `d8:85:ac:bb:b0:80`，UUID `d6274f48-0733-4281-a355-18fc1cad5d1d`。分支 `fix/s3-cam-pa-gpio46` `d04aade`，SKU `esp32-s3-usb-cam`，ELF SHA `56c3bdbec`。NVS 无 Wi-Fi，已进热点 `Xiaozhi-B081`（`http://192.168.4.1`）。ES8311 `0x18`、ES7210 `0x41` 有应答。未激活。契约未变更。 |
 | 2026-11-08 | 固件 | 按 SCH_Schematic1 2026-10-16 改眼睛：背光 GPIO15（低电平亮），灯带使能 GPIO42，左眼 FPC3/CS1=GPIO16 镜像，右眼 FPC1/CS2=GPIO17。SCL/SDA/DC/RES 未改。已 `app-flash` 到 COM29，MAC `d8:85:ac:bb:b0:80`。启动日志确认 CS 与 BL。固件改动未提交。契约未变更。 |
+| 2026-11-08 | 固件 | 双眼瞳孔偏到排线对面。送屏 Y 偏移从 +8 改为 -26，把资产中心从约第 90 行拉到圆窗中心。已 `app-flash` 到 COM25，MAC `d8:85:ac:bb:b0:80`。待目视。固件改动未提交。契约未变更。 |
