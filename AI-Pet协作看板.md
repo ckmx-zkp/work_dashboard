@@ -55,7 +55,7 @@
 | 版本 | 上游 v0.9.6 全模块（server + manager-web + MySQL + Redis，官方镜像） |
 | 端口 | 8000=设备 WebSocket；8002=智控台(manager-web/api，OTA 也在这：`/xiaozhi/ota/`)；8003=视觉/HTTP |
 | 代码 | 源码快照在 GitHub `ckmx-zkp/aipet-xiaozhi-server-`（钉 v0.9.6，无 fork 关联） |
-| 状态 | 2026-11-08 续费后服务已恢复。智能体「星仔的测试机」对话与视觉仍是 MiniMax-M3，backend worker 为 MiniMax-M2.5。MiniMax 密钥已轮换；`api.minimaxi.com` 探测返回 402 insufficient balance (1008)。设备需重连。密钥不入库。 |
+| 状态 | 2026-11-08 智能体「星仔的测试机」对话与视觉为 MiniMax-M3，backend worker 为 MiniMax-M2.5。MiniMax 密钥已再次轮换；`api.minimaxi.com` 探测仍返回 402 insufficient balance (1008)。设备需重连。密钥不入库。 |
 
 ## 集成点状态（双方共同维护）
 2026-09-08 人格化陪伴已部署：六工具+28份策略、候选偏好审批和会话约定；backend 9be6235、小智b14-companion、内部MCP20260908-companion。139后端测试、43内容测试、独立PG与MCP写入及线上真实检索通过，4块实体板原生客户端读取/重连通过，物理验收仍待补。朋友的赛博分身使用独立账号和虚拟设备，云桥20260908-cloud于20:14向指定小智云接入点注册14工具；不复用宠物数据。契约已变更，详见backend docs/06及小智docs/05、11。
@@ -594,3 +594,4 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-11-08 | 运维 | 用户确认 ECS `39.107.143.71` 已过期。此前公网只完成 TCP 握手，SSH 在密钥交换前断开，8002 OTA 与 8000/8080/8081 空响应。续费前无法修复服务。契约未变更。 |
 | 2026-11-08 | 运维 | ECS 续费后 SSH 恢复，相关容器 Up。智能体「星仔的测试机」对话与视觉均为 MiniMax-M3；backend worker 为 MiniMax-M2.5。契约未变更。 |
 | 2026-11-08 | 运维 | MiniMax 密钥已轮换到 backend `.env`、两份 content.env，以及 `LLM_MiniMaxM25` / `LLM_MiniMaxM3` / `VLLM_MiniMaxM3`。已重建 agent-worker、内容 MCP、云桥，删除 Redis `server:config` 并重启语音容器。探测 `api.minimaxi.com` 返回 402 insufficient balance (1008)。密钥不入库。契约未变更。 |
+| 2026-11-08 | 运维 | MiniMax 密钥再次轮换到同样三处模型配置和 env。已重建 agent-worker、内容 MCP、云桥，删除 Redis `server:config` 并重启语音容器。探测仍返回 402 insufficient balance (1008)。密钥不入库。契约未变更。 |
