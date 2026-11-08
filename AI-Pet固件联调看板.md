@@ -189,4 +189,5 @@
 | 2026-10-02 | 固件 | 实机确认跟随仍反。扭头映射再镜像一次：`yaw>0` 时舵机角度增大。语音点动不翻。已烧 COM25。契约未变更。 |
 | 2026-10-02 | 固件 / 语音 | S3 改为上传相机原始 JPEG，不再旋转重压，已烧 COM25。语音镜像切到 `xiaozhi-aipet-server:v0.9.6-b18-spoken-vision`，识图只答所问、一句不超过 20 字。只重建了语音容器。挂载的 data 配置未改。 |
 | 2026-10-02 | 固件 | 巨蟹眼睛从 108 改为铺满 128 宽，垂直第 26–154 行。视线平移 12px 改为 8px。资源已生成，已烧 COM25。目视仍偏左上，送屏再往右 6px、往下 8px，已再烧，待目视。 |
-| 2026-11-08 | 固件 | 新 S3 大板 COM25 完整烧录：ESP32-S3 QFN56、32MB octal、16MB PSRAM，MAC `d8:85:ac:bb:b0:80`，UUID `d6274f48-0733-4281-a355-18fc1cad5d1d`。分支 `fix/s3-cam-pa-gpio46` `d04aade`，SKU `esp32-s3-usb-cam`，ELF SHA `56c3bdbec`。NVS 无 Wi-Fi，已进热点 `Xiaozhi-B081`（`http://192.168.4.1`）。ES8311 `0x18`、ES7210 `0x41` 有应答。未激活。契约未变更。 | |
+| 2026-11-08 | 固件 | 新 S3 大板 COM25 完整烧录：ESP32-S3 QFN56、32MB octal、16MB PSRAM，MAC `d8:85:ac:bb:b0:80`，UUID `d6274f48-0733-4281-a355-18fc1cad5d1d`。分支 `fix/s3-cam-pa-gpio46` `d04aade`，SKU `esp32-s3-usb-cam`，ELF SHA `56c3bdbec`。NVS 无 Wi-Fi，已进热点 `Xiaozhi-B081`（`http://192.168.4.1`）。ES8311 `0x18`、ES7210 `0x41` 有应答。未激活。契约未变更。 |
+| 2026-11-08 | 固件 | 按 SCH_Schematic1 2026-10-16 改眼睛：背光 GPIO15（低电平亮），灯带使能 GPIO42，左眼 FPC3/CS1=GPIO16 镜像，右眼 FPC1/CS2=GPIO17。SCL/SDA/DC/RES 未改。已 `app-flash` 到 COM29，MAC `d8:85:ac:bb:b0:80`。启动日志确认 CS 与 BL。固件改动未提交。契约未变更。 |
