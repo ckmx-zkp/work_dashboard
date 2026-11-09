@@ -55,7 +55,7 @@
 | 版本 | 上游 v0.9.6 全模块（server + manager-web + MySQL + Redis，官方镜像） |
 | 端口 | 8000=设备 WebSocket；8002=智控台(manager-web/api，OTA 也在这：`/xiaozhi/ota/`)；8003=视觉/HTTP |
 | 代码 | 源码快照在 GitHub `ckmx-zkp/aipet-xiaozhi-server-`（钉 v0.9.6，无 fork 关联） |
-| 状态 | 2026-11-08 智能体「星仔的测试机」对话、视觉、小模型和短期记忆总结都绑定 `LLM_DoubaoSeed20Pro` / `VLLM_DoubaoSeed20Pro`（`doubao-seed-2-0-pro-260215`）。文本和 32×32 图片探测均为 200。豆包 Lite/Mini 仍未开通。backend worker 与内容 MCP 已改用同一豆包模型；每日运势的 MiniMax 联网检索已关闭。已清 Redis `server:config`，重建 worker、内容 MCP、云桥并重启语音容器。设备需重连。密钥不入库。 |
+| 状态 | 2026-11-09 智能体「星仔的测试机」对话和小模型已切 `LLM_DoubaoLLM`（Seed 2.0 Mini），视觉仍为 `VLLM_DoubaoSeed20Pro`。Mini 文本探测 HTTP 200，设备重连后待真机验证。backend worker 与内容 MCP 已改用同一豆包模型；每日运势的 MiniMax 联网检索已关闭。已清 Redis `server:config`，重建 worker、内容 MCP、云桥并重启语音容器。设备需重连。密钥不入库。 |
 
 ## 集成点状态（双方共同维护）
 2026-09-08 人格化陪伴已部署：六工具+28份策略、候选偏好审批和会话约定；backend 9be6235、小智b14-companion、内部MCP20260908-companion。139后端测试、43内容测试、独立PG与MCP写入及线上真实检索通过，4块实体板原生客户端读取/重连通过，物理验收仍待补。朋友的赛博分身使用独立账号和虚拟设备，云桥20260908-cloud于20:14向指定小智云接入点注册14工具；不复用宠物数据。契约已变更，详见backend docs/06及小智docs/05、11。
@@ -599,3 +599,5 @@ backend 侧 E2（persona_pack 实际可用）正在开发，完成后会在此�
 | 2026-11-08 | 运维 | 核对全部 LLM 密钥：MiniMax 对话、视觉、M2.5 与三个运行容器为同一把新密钥。豆包、智谱、Kimi、千帆未改。设备 22:55 的对话请求仍收到 MiniMax 402，因此播报系统错误「有点忙」。契约未变更。 |
 | 2026-11-08 | 运维 | 对话模型从 `LLM_MiniMaxM3` 改为 `LLM_DoubaoSeed20Pro`。探测：Mini/Lite 404 未开通，Pro、2.1 Pro、拟人角色 200。已清 Redis `server:config` 并重启语音容器。视觉仍是 MiniMax。契约未变更。 |
 | 2026-11-08 | 运维 | 对话、视觉、小模型、短期记忆总结、backend worker 和内容生成都切到豆包 Seed 2.0 Pro（`doubao-seed-2-0-pro-260215`）。视觉用可用文本密钥重探，文本与图片均 200。内容 MCP 不再走 MiniMax。每日运势联网检索依赖 MiniMax-M3，已关闭，改由豆包生成并标注非实时。worker、内容 MCP、云桥已重建，语音容器已重启。设备需重连。契约未变更。密钥不入库。 |
+
+| 2026-11-09 | xiaozhi-server | 智能体「星仔的测试机」对话 LLM 和 SLM 从豆包 Seed 2.0 Pro 切为 Seed 2.0 Mini；视觉仍为 Pro，backend worker 和内容 MCP 未改。Mini 文本接口 HTTP 200；定向清除配置缓存并重启语音容器，设备重连后待真机对话验证。Mini 免费额度已用尽，调用可能按量计费。 |
